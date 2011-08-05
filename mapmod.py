@@ -256,39 +256,10 @@ class MapData(object):
         return self._map
 
     def setmap(self, map):
-        if not isinstance(map, np.ndarray):
-            raise TypeError('Map must be numpy array')
-        if self.subd == None:
-            if map.ndim == 1:
-                map = map.reshape((1, np.size(map)))
-            elif map.ndim > 2:
-                raise ValueError('Too many dimensions in map')
-            elif map.ndim < 1:
-                raise ValueError('Too few dimensions in map')
-            self._map = map
-        else:
-            mlen = np.size(self.subd) + 2
-            if mlen > map.ndim + 1:
-                raise ValueError('Too few dimensions in map')
-            elif mlen < map.ndim:
-                raise ValueError('Too many dimensions in map')
-            if mlen == map.ndim:
-                if any(np.shape(map)[:-2] != self.subd):
-                    raise ValueError("Map dimensions do not conform to MapData
-                                    subdivision")
-            elif mlen == map.ndim + 1:
-                if (any(np.shape(map)[:-1] != self.subd)):
-                    raise ValueError("Map dimensions do not conform to MapData
-                                    subdivision")
-                else:
-                    map = map.reshape((np.append(self.subd, 
-                                        (1, np.size(map,-1)))))
-            self._map = map
+        map = self.conform(map)
+        self._map = map
 
     map = property(getmap, setmap)
-
-    def getsubd(self):
-        return self._subd
 
     def switchorder(self):
         if self.nside is None:
@@ -323,7 +294,6 @@ class MapData(object):
         be the leftmost dimension in the resulting MapData.map array.
 
         """
-        #_dyn_ind for possible later use
         if isinstance(vals, int):
             self.dyn_ind += 1
         elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
@@ -340,17 +310,46 @@ class MapData(object):
             self._map = np.resize(self._map, np.append(self.subd, 
                                     (np.size(self._map, -2), 
                                     np.size(self._map, -1))))
-            
 
-    def addmap(self, map):
-        if np.shape(map) > 1:
-            addsize = len(map)
+    def addmaps(self, map):
+        if self.map is None:
+            self.map = map
         else:
-            addsize = 1
-        if np.shape(self.map) > 1 :
-            csize = len(self.map)
+            if np.size(map, -1) != np.size(self.map, -1):
+                raise ValueError("Incorrect number of pixels in input map")
+            map = self.conform(map)
+            self.map = np.append(self.map, map, axis=self.dyn_ind)
+
+    def conform(self, map):
+        """Make input map acceptable shape, or raise exception."""
+        if not isinstance(map, np.ndarray):
+            raise TypeError('Map must be numpy array')
+        if self.subd == None:
+            if map.ndim == 1:
+                map = map.reshape((1, np.size(map)))
+            elif map.ndim > 2:
+                raise ValueError('Too many dimensions in map')
+            elif map.ndim < 1:
+                raise ValueError('Too few dimensions in map')
         else:
-            csize = 1
+            mlen = np.size(self.subd) + 2
+            if mlen > map.ndim + 1:
+                raise ValueError('Too few dimensions in map')
+            elif mlen < map.ndim:
+                raise ValueError('Too many dimensions in map')
+            if mlen == map.ndim:
+                if any(np.shape(map)[:-2] != self.subd):
+                    raise ValueError("""Map dimensions do not conform to MapData
+                                    subdivision""")
+            elif mlen == map.ndim + 1:
+                if (any(np.shape(map)[:-1] != self.subd)):
+                    raise ValueError("""Map dimensions do not conform to MapData
+                                    subdivision""")
+                else:
+                    map = map.reshape((np.append(self.subd, 
+                                        (1, np.size(map,-1)))))
+        return map
+
     #def write(self, filename, ftype='fits'):
     #    try:
     #        self.validate():
