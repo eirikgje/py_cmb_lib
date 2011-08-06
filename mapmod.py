@@ -184,7 +184,7 @@ def degrade_average(mapd, nside_n):
     Output map will be in nested ordering, no matter what the input map was.
     """
     if mapd.ordering == 'ring':
-        mapd.switchorder()
+        mapd.switchordering()
 
     redfact = (mapd.nside/nside_n)**2
     mapd.map = np.reshape(mapd.map, (12*nside_n*nside_n, redfact))
@@ -232,7 +232,7 @@ class MapData(object):
 
     The basic map structure is (nmaps, npix). Assignments with a
     one-dimensional array will reshape to this form. Ordering should be set
-    once, subsequently it should be switched with switchorder().
+    once, subsequently it should be switched with switchordering().
 
     """
 #    It is possible to 
@@ -268,25 +268,26 @@ class MapData(object):
     def setordering(self, ordering):
         if ordering.lower() != 'ring' and ordering.lower() != 'nested':
             raise ValueError("Ordering must be ring or nested")
-        self._ordering = ordering
+        self._ordering = ordering.lower()
 
     ordering = property(getordering, setordering)
 
-    def switchorder(self):
-        if self.nside is None:
-            raise ValueError('No nside given for map')
-        if len(self.map[-1,:]) != 12*self.nside**2:
-            raise ValueError('Number of pixels incompatible with nside')
+    def switchordering(self):
         if self.ordering is None:
-            raise ValueError('No ordering given for map')
+            raise ValueError("No ordering given for map")
+        if self.map is not None:
+            if self.nside is None:
+                raise ValueError("No nside given for map")
+            if len(self.map[-1,:]) != 12*self.nside**2:
+                raise ValueError("Number of pixels incompatible with nside")
         if self.ordering == 'ring':
-            self.map = ring2nest(self.map, self.nside)
+            if self.map is not None:
+                self.map = ring2nest(self.map, self.nside)
             self.ordering = 'nested'
         elif self.ordering == 'nested':
-            self.map = nest2ring(self.map, self.nside)
+            if self.map is not None:
+                self.map = nest2ring(self.map, self.nside)
             self.ordering='ring'
-        else:
-            raise ValueError('Unknown map ordering type')
 
     def subdivide(self, vals):
         """Can take either int, tuple or numpy arrays as arguments.
@@ -308,7 +309,7 @@ class MapData(object):
         if isinstance(vals, int):
             self.dyn_ind += 1
         elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
-            self.dyn_ind += len(vals)
+            self.dyn_ind += np.size(vals)
         else:
             raise TypeError('Must be int, tuple or np.ndarray')
 

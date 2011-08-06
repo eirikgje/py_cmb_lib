@@ -3,7 +3,7 @@ import numpy as np
 import pyfits
 #import mapmod
 
-def read_fits_map(fname, md, nside, ordering):
+def read_fits_map(fname, md):
     #This will expand as need arises, for now, pretty ad-hoc
     hdulist = pyfits.open(fname)
     data = hdulist[1].data
@@ -26,7 +26,11 @@ def read_fits_map(fname, md, nside, ordering):
         md.ordering = hdr['ordering']
     else:
         if md.ordering != hdr['ordering'].lower:
-
+            md.switchordering()
     npix = 12*nside*nside
+    map = np.zeros((subd, npix))
     for i in range(subd):
-        map = d.field(i).flatten()
+        map[i] = data.field(i).flatten()
+    md.map = map
+    hdulist.close()
+    return md
