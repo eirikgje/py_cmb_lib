@@ -220,7 +220,7 @@ def nest2ring(map, nside):
     else:
         import binmod
         b = binmod.bin(nside)
-    if (b[0] != '1' or int(b[1:],2) !=0):
+    if (b[0] != '1' or int(b[1:], 2) != 0):
         raise ValueError('nest2ring: nside has invalid value')
 
     if not _n2r.has_key(nside):
@@ -231,7 +231,8 @@ class MapData(object):
     """Class to store and pass relevant map information.
 
     The basic map structure is (nmaps, npix). Assignments with a
-    one-dimensional array will reshape to this form. 
+    one-dimensional array will reshape to this form. Ordering should be set
+    once, subsequently it should be switched with switchorder().
 
     """
 #    It is possible to 
@@ -247,7 +248,7 @@ class MapData(object):
     #with read and write statements.
     def __init__(self):
         self._map = None
-        self.ordering = None
+        self._ordering = None
         self.nside = None
         self.subd = None
         self.dyn_ind = 0
@@ -256,15 +257,25 @@ class MapData(object):
         return self._map
 
     def setmap(self, map):
-        map = self.conform(map)
+        map = self.conform_map(map)
         self._map = map
 
     map = property(getmap, setmap)
 
+    def getordering(self):
+        return self._ordering
+    
+    def setordering(self, ordering):
+        if ordering.lower() != 'ring' and ordering.lower() != 'nested':
+            raise ValueError("Ordering must be ring or nested")
+        self._ordering = ordering
+
+    ordering = property(getordering, setordering)
+
     def switchorder(self):
         if self.nside is None:
             raise ValueError('No nside given for map')
-        if len(self.map[0,:]) != 12*self.nside**2:
+        if len(self.map[-1,:]) != 12*self.nside**2:
             raise ValueError('Number of pixels incompatible with nside')
         if self.ordering is None:
             raise ValueError('No ordering given for map')
@@ -289,7 +300,7 @@ class MapData(object):
         map array added (or assigned) to the MapData instance must have the
         shape (x1, x2, ..., xn, n, npix) or (x1, x2, ..., xn, npix) where
         x1, x2, ..., xn are the subdivisions and n is the number of map samples
-        added (could be 1). 
+        added (could be 1 and will be interpreted as 1 if missing). 
         Subdivision can be done several times. The new dimension will then
         be the leftmost dimension in the resulting MapData.map array.
 
@@ -312,16 +323,34 @@ class MapData(object):
                                     np.size(self._map, -1))))
 
     def addmaps(self, map):
+        """Add one or several maps to object instance.
+
+        The input map(s) must be numpy arrays, and they must have the shape
+        (subd, nmaps, npix) or (subd, npix) where subd is the current
+        subdivision of the map instance, npix is the number of pixels of the
+        maps already added to the object instance. If there currently are no
+        maps added to the instance, this function is equivalent to an
+        assignment (and npix can be whatever). nmaps can be any number, and if
+        this dimension is missing from the array, it will be interpreted as a
+        single map. If there are no subdivisions, a (npix) numpy array is
+        acceptable.
+
+        """
         if self.map is None:
             self.map = map
         else:
             if np.size(map, -1) != np.size(self.map, -1):
                 raise ValueError("Incorrect number of pixels in input map")
-            map = self.conform(map)
+            map = self.conform_map(map)
             self.map = np.append(self.map, map, axis=self.dyn_ind)
 
-    def conform(self, map):
-        """Make input map acceptable shape, or raise exception."""
+    def conform_map(self, map):
+        """Make input map acceptable shape, or raise exception.
+        
+        Input map is only compared to the current subdivision, not any present
+        maps.
+        
+        """
         if not isinstance(map, np.ndarray):
             raise TypeError('Map must be numpy array')
         if self.subd == None:
@@ -347,7 +376,7 @@ class MapData(object):
                                     subdivision""")
                 else:
                     map = map.reshape((np.append(self.subd, 
-                                        (1, np.size(map,-1)))))
+                                        (1, np.size(map, -1)))))
         return map
 
     #def write(self, filename, ftype='fits'):
