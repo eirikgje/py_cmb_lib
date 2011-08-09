@@ -323,7 +323,7 @@ class MapData(object):
                                     (np.size(self._map, -2), 
                                     np.size(self._map, -1))))
 
-    def addmaps(self, map):
+    def appendmaps(self, map):
         """Add one or several maps to object instance.
 
         The input map(s) must be numpy arrays, and they must have the shape

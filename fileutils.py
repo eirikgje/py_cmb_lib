@@ -34,3 +34,7 @@ def read_fits_map(fname, md):
     md.map = map
     hdulist.close()
     return md
+
+def write_fits_map(fname, md):
+    #So far will only write information that is actually needed for this
+    #library. Could cause compatibility problems later.
