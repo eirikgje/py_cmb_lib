@@ -23,6 +23,8 @@ def test_sanity():
     map = np.arange(npix)
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
     yield ok_, np.all(md.map == map)
+    yield ok_, md.nside == nside
+    yield ok_, md.ordering == 'ring'
 
 def test_init():
     def func():
@@ -32,13 +34,24 @@ def test_init():
     def func():
         md = mapmod.MapData(map=map, nside=12, ordering='ring')
     yield assert_raises, ValueError, func
-    #Should not be able to set ordering to anything else than ring or nest:
     def func():
         md = mapmod.MapData(map=map, nside=nside, ordering='ringe')
     yield assert_raises, ValueError, func
     def func():
-        md = mapmod.MapData(map=4, nside=12, ordering='ring')
+        md = mapmod.MapData(map=4, nside=nside, ordering='ring')
     yield assert_raises, TypeError, func
 
 def test_assign():
     md = mapmod.MapData(map=map, nside=nside, ordering='ring')
+    def func():
+        md.map = 4
+    yield assert_raises, TypeError, func
+    def func():
+        md.nside = 12.0
+    yield assert_raises, TypeError, func
+    def func():
+        md.nside = 12
+    yield assert_raises, ValueError, func
+    def func():
+        md.ordering = 'neste'
+    yield assert_raises, ValueError, func
