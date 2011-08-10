@@ -24,12 +24,6 @@ def _init_r2n(nside):
     nl2 = 2*nside
     nl4 = 4*nside
     ncap = nl2*(nside-1)
-    #hip = np.zeros(npix)
-    #fihip = np.zeros(npix)
-    #irn = np.zeros(npix)
-    #iphi = np.zeros(npix)
-    #nr = np.zeros(npix)
-    #face_num = np.zeros(npix)
 
     #South polar cap (default)
     ip = npix - pixs + 1
@@ -246,18 +240,22 @@ class MapData(object):
 #    """
     #Will contain the data needed to fully describe a HEALPix map,
     #with read and write statements.
-    def __init__(self):
-        self._map = None
-        self._ordering = None
-        self.nside = None
-        self.subd = None
+    def __init__(self, map=None, ordering=None, nside=None, subd=None):
+        self.ordering = ordering
+        self.nside = nside
+        if subd is None:
+            self.subd = subd
+        else:
+            self.subdivide(subd)
         self.dyn_ind = 0
+        self.map = map
 
     def getmap(self):
         return self._map
 
     def setmap(self, map):
-        map = self.conform_map(map)
+        if map is not None:
+            map = self.conform_map(map)
         self._map = map
 
     map = property(getmap, setmap)
@@ -266,9 +264,12 @@ class MapData(object):
         return self._ordering
     
     def setordering(self, ordering):
-        if ordering.lower() != 'ring' and ordering.lower() != 'nested':
-            raise ValueError("Ordering must be ring or nested")
-        self._ordering = ordering.lower()
+        if ordering is None:
+            self._ordering = ordering
+        else:
+            if ordering.lower() != 'ring' and ordering.lower() != 'nested':
+                raise ValueError("Ordering must be ring or nested")
+            self._ordering = ordering.lower()
 
     ordering = property(getordering, setordering)
 
