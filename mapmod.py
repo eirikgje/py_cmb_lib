@@ -226,36 +226,26 @@ class MapData(object):
 
     The basic map structure is (nmaps, npix). Assignments with a
     one-dimensional array will reshape to this form. Ordering should be set
-    once, subsequently it should be switched with switchordering().
+    at construction, subsequently it should be switched with switchordering().
+    At this point, nside is uniquely determined by the last dimension of the
+    map array.
 
     """
-#    It is possible to 
-#    define subdivisions of this structure; these will all be 'static' 
-#    in the sense that if md 
-#    is a MapData instance, md.subdivide(3) (e.g. for polarization) will
-#    require that in assignments (md.map = map) or appends (md.append(map)), 
-#    map must be either (3, nmaps, npix) or (3, npix). nmaps is thus the only
-#    'dynamic' dimension. Further subdivisions are possible (see
-#    Mapdata.subdivide() for more information.)
-#    """
-    #Will contain the data needed to fully describe a HEALPix map,
-    #with read and write statements.
-    def __init__(self, map=None, ordering=None, nside=None, subd=None):
-        self.ordering = ordering
-        self.nside = nside
+    def __init__(self, map, nside, ordering, subd=None):
+        self.dyn_ind = 0
         if subd is None:
             self.subd = subd
         else:
             self.subdivide(subd)
-        self.dyn_ind = 0
         self.map = map
+        self.nside = nside
+        self.ordering = ordering
 
     def getmap(self):
         return self._map
 
     def setmap(self, map):
-        if map is not None:
-            map = self.conform_map(map)
+        map = self.conform_map(map)
         self._map = map
 
     map = property(getmap, setmap)
@@ -272,6 +262,21 @@ class MapData(object):
             self._ordering = ordering.lower()
 
     ordering = property(getordering, setordering)
+
+    def getnside(self):
+        return self._nside
+
+    def setnside(self, nside):
+        if not isinstance(nside, int):
+            raise TypeError("nside must be an integer")
+        else:
+            if np.size(self.map, -1) != 12*nside*nside:
+                raise ValueError("""nside must be compatible with last
+                                    dimension of map""")
+            self._nside = nside
+
+    nside = property(getnside, setnside)
+
 
     def switchordering(self):
         if self.ordering is None:
@@ -380,20 +385,3 @@ class MapData(object):
                     map = map.reshape((np.append(self.subd, 
                                         (1, np.size(map, -1)))))
         return map
-
-    #def write(self, filename, ftype='fits'):
-    #    try:
-    #        self.validate():
-    #    except ValidateError as 
-    #        if ftype='fits':
-    #            fileutils.write_fitsmap(filename, self)
-    #        elif ftype='npy':
-    #            np.save(filename, self)
-    #def validate(self):
-    #    if self.map is None or self.ordering is None:
-    #        return False
-    #    if self.npix is None:
-    #        self.npix = np.size(self.map, axis=0)
-    #    if self.nside is None:
-    #        self.nside = np.int(np.sqrt(self.npix//12))
-    #    return self.npix == 12*self.nside*self.nside
