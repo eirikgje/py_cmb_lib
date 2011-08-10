@@ -55,3 +55,16 @@ def test_assign():
     def func():
         md.ordering = 'neste'
     yield assert_raises, ValueError, func
+
+def test_shape():
+    map = np.arange(npix)
+    md = mapmod.MapData(map=map, nside=nside, ordering='ring')
+    yield eq_, (1, npix), md.map.shape
+    md.subdivide(5)
+    yield eq_, (5, 1, npix), md.map.shape
+    def func():
+        md.map = map
+    yield assert_raises, ValueError, func
+    map = np.arange(npix)
+    map.resize((2,3,4,npix))
+    yield assert_raises, ValueError, func
