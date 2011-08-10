@@ -39,7 +39,6 @@ def test_init():
     def func():
         md = mapmod.MapData(map=4, nside=12, ordering='ring')
     yield assert_raises, TypeError, func
-    #Should not be able to set invalid values after
 
 def test_assign():
-    pass
+    md = mapmod.MapData(map=map, nside=nside, ordering='ring')

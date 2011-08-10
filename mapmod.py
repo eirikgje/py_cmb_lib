@@ -277,7 +277,6 @@ class MapData(object):
 
     nside = property(getnside, setnside)
 
-
     def switchordering(self):
         if self.ordering is None:
             raise ValueError("No ordering given for map")
