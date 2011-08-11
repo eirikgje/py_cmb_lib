@@ -21,16 +21,17 @@ def _init_r2n(nside):
     jrll = np.array((2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4))
     jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
     npix = 12 * nside**2
-    pixs = np.arange(1, npix + 1)
+    pixs = np.arange(npix)
     nl2 = 2 * nside
     nl4 = 4 * nside
     ncap = nl2 * (nside - 1)
 
     #South polar cap (default)
-    ip = npix - pixs + 1
-    hip = ip / 2.0
-    fihip = hip // 1
-    irs = (np.sqrt(hip - np.sqrt(fihip))).astype(int) + 1
+    ip = npix - pixs
+    #hip = ip / 2.0
+    #fihip = hip // 1
+    irs = (np.sqrt(ip * 0.5)).astype(int)
+    iphi = 2 * irs * (irs + 1) - ip
     iphi = 4 * irs + 1 - (ip - 2 * irs * (irs - 1))
     kshift = np.zeros(npix, int)
     nr = irs
@@ -75,6 +76,17 @@ def _init_r2n(nside):
             _x2pix[ix_low] + _y2pix[iy_low])
 
     _r2n[nside] = ipf + face_num * nside ** 2
+
+#def _correct_ring_phi(location, iring, iphi):
+#    delta = 0
+#    if (iphi < 0): delta += 1
+#    if (iphi >= 4 * iring): -= 1
+#    if (delta != 0):
+#        if (abs(location) != 1):
+#            raise ValueError("Location must have absolute value 1")
+#        iring = iring - location * delta
+#        iphi = iphi + delta * (4 * iring)
+#    return 
 
 def _mk_xy2pix():
     global _x2pix
