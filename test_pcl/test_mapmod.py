@@ -14,6 +14,8 @@ def test_ordering_conversion():
     md.switchordering()
     for key, value in r2npixs.items():
         yield eq_, md.map[0, key], value
+    md.switchordering()
+    yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
     md.switchordering()
@@ -21,47 +23,54 @@ def test_ordering_conversion():
         yield eq_, md.map[0, key], value
 
 def test_sanity():
-    map = np.arange(npix)
-    md = mapmod.MapData(map=map, ordering='ring', nside=nside)
-    yield ok_, np.all(md.map == map)
+    md = mapmod.MapData(nside=nside)
     yield ok_, md.nside == nside
+    md = mapmod.MapData(nside, ordering='ring')
     yield ok_, md.ordering == 'ring'
+    md = mapmod.MapData(nside, ordering='nested')
+    yield ok_, md.ordering == 'nested'
+    map = np.arange(npix)
+    md = mapmod.MapData(nside, map=map)
+    yield ok_, np.all(md.map == map)
+    md = mapmod.MapData(nside, subd=(3, 2, 1))
+    yield ok_, np.all((3, 2, 1) == md.subd)
 
 def test_init():
     def func():
-        md = mapmod.MapData(map=map, nside=32.0, ordering='ring')
+        md = mapmod.MapData(nside=32.0)
     yield assert_raises, TypeError, func
     #Should not be able to set nside different from map nside
     def func():
-        md = mapmod.MapData(map=map, nside=12, ordering='ring')
+        md = mapmod.MapData(nside=12, map=map)
     yield assert_raises, ValueError, func
     def func():
-        md = mapmod.MapData(map=map, nside=nside, ordering='ringe')
+        md = mapmod.MapData(nside, ordering='ringe')
     yield assert_raises, ValueError, func
     def func():
-        md = mapmod.MapData(map=4, nside=nside, ordering='ring')
+        md = mapmod.MapData(nside, map=4)
     yield assert_raises, TypeError, func
     #Given no map, should initialize a map of zeros with given nside
-    md = mapmod.MapData(nside=nside, ordering='ring')
+    md = mapmod.MapData(nside=nside)
     yield ok_, np.all(md.map == np.zeros((1, npix)))
 
 def test_assign():
-    md = mapmod.MapData(nside=nside, ordering='ring')
+    md = mapmod.MapData(nside)
     def func():
         md.map = 4
     yield assert_raises, TypeError, func
     def func():
         md.nside = 12.0
     yield assert_raises, TypeError, func
-    def func():
-        md.nside = 12
-    yield assert_raises, ValueError, func
+    #TODO: Assignment of nside - up/degradation of map?
+    #def func():
+    #    md.nside = 12
+    #yield assert_raises, ValueError, func
     def func():
         md.ordering = 'neste'
     yield assert_raises, ValueError, func
 
 def test_shape():
-    md = mapmod.MapData(nside=nside, ordering='ring')
+    md = mapmod.MapData(nside)
     yield eq_, (1, npix), md.map.shape
     md.subdivide(5)
     yield eq_, (5, 1, npix), md.map.shape
@@ -71,5 +80,5 @@ def test_shape():
     yield assert_raises, ValueError, func
     map.resize((2,3,4,npix))
     yield assert_raises, ValueError, func
-    md = mapmod.MapData(nside=nside, ordering='ring', subd=(3, 2))
+    md = mapmod.MapData(nside, subd=(3, 2))
     yield eq_, (3, 2, 1, npix), md.map.shape

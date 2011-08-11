@@ -5,7 +5,6 @@ if sys.version >= '2.5':
     any = __builtin__.any
     all = __builtin__.all
 else:
-
     def any(arr):
         return bool(sum(arr))
         
@@ -17,7 +16,7 @@ if sys.version >= '2.6':
 else:
     def bin(s):
         if s <= 1:
-            return str(s)
+            return '0b' + str(s)
         else:
             return bin(s >> 1) + str(s&1)
 

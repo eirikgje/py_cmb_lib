@@ -81,17 +81,10 @@ def _mk_xy2pix():
     global _y2pix
     _x2pix = np.zeros(128, int)
     _y2pix = np.zeros(128, int)
-    if sys.version >= '2.6':
-        for i in range(128):
-            b = bin(i)[2:]
-            _x2pix[i] = int(b, 4)
-            _y2pix[i] = 2 * int(b, 4)
-    else:
-        import binmod
-        for i in range(128):
-            b = binmod.bin(i)
-            _x2pix[i] = int(b, 4)
-            _y2pix[i] = 2 * int(b, 4)
+    for i in range(128):
+        b = bin(i)[2:]
+        _x2pix[i] = int(b, 4)
+        _y2pix[i] = 2 * int(b, 4)
 
 def _init_n2r(nside):
     global _n2r
@@ -155,23 +148,13 @@ def _mk_pix2xy():
     _pix2y = np.zeros(1024, int)
 
     #pix2x contains the sum of all odd bits, pix2y all the even ones.
-    if sys.version >= '2.6':
-        for i in range(1024):
-            b = bin(i)[2:]
-            _pix2x[i] = int(b[-1::-2], 2)
-            if len(b) == 1:
-                _pix2y[i] = 0
-            else:
-                _pix2y[i] = int(b[-2::-2], 2)
-    else:
-        import binmod
-        for i in range(1024):
-            b = binmod.bin(i)
-            _pix2x[i] = int(b[-1::-2], 2)
-            if len(b) == 1:
-                _pix2y[i] = 0
-            else:
-                _pix2y[i] = int(b[-2::-2], 2)
+    for i in range(1024):
+        b = bin(i)[2:]
+        _pix2x[i] = int(b[-1::-2], 2)
+        if len(b) == 1:
+            _pix2y[i] = 0
+        else:
+            _pix2y[i] = int(b[-2::-2], 2)
 
 def degrade_average(mapd, nside_n):
     """Degrade input map to nside resolution by averaging over pixels.
@@ -193,12 +176,7 @@ def degrade(mapd, nside_n, pixwin=None):
 def ring2nest(map, nside):
     """Assumes map has shape (nmaps, npix)"""
     global _r2n
-
-    if sys.version >= '2.6':
-        b = bin(nside)[2:]
-    else:
-        import binmod
-        b = binmod.bin(nside)
+    b = bin(nside)[2:]
     if (b[0] != '1' or int(b[1:],2) !=0):
         raise ValueError('nest2ring: nside has invalid value')
 
@@ -210,11 +188,7 @@ def nest2ring(map, nside):
     """Assumes map has shape (nmaps, npix)"""
     global _n2r
 
-    if sys.version >= '2.6':
-        b = bin(nside)[2:]
-    else:
-        import binmod
-        b = binmod.bin(nside)
+    b = bin(nside)[2:]
     if (b[0] != '1' or int(b[1:], 2) != 0):
         raise ValueError('nest2ring: nside has invalid value')
 
@@ -232,7 +206,7 @@ class MapData(object):
     map array.
 
     """
-    def __init__(self, nside, ordering, map=None, subd=None):
+    def __init__(self, nside, ordering='ring', map=None, subd=None):
         self.dyn_ind = 0
         self._map = None
         self.subd = None
