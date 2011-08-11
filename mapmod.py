@@ -28,46 +28,46 @@ def _init_r2n(nside):
 
     #South polar cap (default)
     ip = npix - pixs
-    #hip = ip / 2.0
-    #fihip = hip // 1
-    irs = (np.sqrt(ip * 0.5)).astype(int)
+    irs = (np.sqrt(ip * 0.5).round()).astype(int)
     iphi = 2 * irs * (irs + 1) - ip
-    iphi = 4 * irs + 1 - (ip - 2 * irs * (irs - 1))
+    irs, iphi = _correct_ring_phi(1, npix, irs, iphi)
     kshift = np.zeros(npix, int)
     nr = irs
     irn = nl4 - irs 
-    face_num = (iphi - 1) // irs + 8
+    face_num = iphi // irs + 8
 
     #Equatorial region
-    filter = pixs <= nl2 * (5 * nside + 1)
-    ip[filter] = pixs[filter] - ncap - 1
+    filter = pixs < npix - ncap
+    ip[filter] = pixs[filter] - ncap
     irn[filter] = (ip[filter] / nl4).astype(int) + nside
-    iphi[filter] = ip[filter] % nl4 + 1
+    iphi[filter] = ip & (nl4 - 1) 
     kshift[filter] = (irn[filter] + nside) % 2
     nr[filter] = nside
     ire = irn[filter] - nside + 1
     irm = nl2 + 2 - ire
-    ifm = (iphi[filter] - ire // 2 + nside - 1) // nside
-    ifp = (iphi[filter] - irm // 2 + nside - 1) // nside
-    face_num[filter[filter] & (ifp - 1 == ifm)] = ifp[ifp - 1 == ifm] + 7
-    face_num[filter[filter] & (ifp + 1 == ifm)] = ifp[ifp + 1 == ifm]
-    face_num[filter[filter] & (ifp == ifm)] = ifp[ifp == ifm] % 4 + 4
+    ifm = (iphi[filter] - ire // 2 + nside) // nside
+    ifp = (iphi[filter] - irm // 2 + nside) // nside
+    face_num[filter[filter] & (ifp > ifm)] = ifp[ifp > ifm] + 7
+    face_num[filter[filter] & (ifp < ifm)] = ifp[ifp < ifm]
+    face_num[filter[filter] & (ifp == ifm)] = (ifp[ifp == ifm] & 3) + 4
 
     #North polar cap
-    filter = pixs <= ncap
-    hip[filter] = pixs / 2.0
-    fihip[filter] = hip[filter] // 1
-    irn[filter] = (np.sqrt(hip[filter] - np.sqrt(fihip[filter]))).astype(int) + 1
+    filter = pixs < ncap
+    #hip[filter] = pixs / 2.0
+    #fihip[filter] = hip[filter] // 1
+    irn[filter] = (np.sqrt((pixs[filter] + 1) * 0.5).round()).astype(int)
     iphi[filter] = pixs[filter] - 2 * irn[filter] * (irn[filter] - 1)
+    irn[filter], iphi[filter] = _correct_ring_phi(1, npix, irn[filter],
+                                                  iphi[filter])
     nr[filter] = irn[filter]
-    face_num[filter] = (iphi[filter] - 1) // irn[filter]
+    face_num[filter] = iphi[filter] // irn[filter]
 
     irt = irn - jrll[face_num] * nside + 1
-    ipt = 2 * iphi - jpll[face_num] * nr - kshift - 1
-    ipt[ipt > nl2] = ipt[ipt > nl2] - 8 * nside
+    ipt = 2 * iphi - jpll[face_num] * nr - kshift + 1
+    ipt[ipt >= nl2] = ipt[ipt >= nl2] - 8 * nside
     ix = (ipt - irt) // 2
     iy = -(ipt + irt) // 2
-    ix_low = ix % 128
+    ix_low = ix & 127
     ix_hi = ix // 128
     iy_low = iy % 128
     iy_hi = iy // 128
@@ -77,16 +77,15 @@ def _init_r2n(nside):
 
     _r2n[nside] = ipf + face_num * nside ** 2
 
-#def _correct_ring_phi(location, iring, iphi):
-#    delta = 0
-#    if (iphi < 0): delta += 1
-#    if (iphi >= 4 * iring): -= 1
-#    if (delta != 0):
-#        if (abs(location) != 1):
-#            raise ValueError("Location must have absolute value 1")
-#        iring = iring - location * delta
-#        iphi = iphi + delta * (4 * iring)
-#    return 
+def _correct_ring_phi(location, npix, iring, iphi):
+    delta = np.zeros(len(iphi), int)
+    delta[iphi < 0] += 1
+    delta[iphi >= 4 * iring] -= 1
+    iring[delta != 0] = iring[delta != 0] - location * delta[delta != 0]
+    iphi[delta != 0] = iphi[delta != 0] + delta[delta != 0] * (4
+                                                        * iring[delta != 0])
+
+    return iring, iphi
 
 def _mk_xy2pix():
     global _x2pix
