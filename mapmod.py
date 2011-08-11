@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 import sys
+from versionmod import bin, any, all
 #import fileutils
 
 _r2n = {}
@@ -80,7 +81,7 @@ def _mk_xy2pix():
     global _y2pix
     _x2pix = np.zeros(128, int)
     _y2pix = np.zeros(128, int)
-    if sys.version[0:3] >= '2.6':
+    if sys.version >= '2.6':
         for i in range(128):
             b = bin(i)[2:]
             _x2pix[i] = int(b, 4)
@@ -154,7 +155,7 @@ def _mk_pix2xy():
     _pix2y = np.zeros(1024, int)
 
     #pix2x contains the sum of all odd bits, pix2y all the even ones.
-    if sys.version[0:3] >= '2.6':
+    if sys.version >= '2.6':
         for i in range(1024):
             b = bin(i)[2:]
             _pix2x[i] = int(b[-1::-2], 2)
@@ -193,7 +194,7 @@ def ring2nest(map, nside):
     """Assumes map has shape (nmaps, npix)"""
     global _r2n
 
-    if sys.version[0:3] >= '2.6':
+    if sys.version >= '2.6':
         b = bin(nside)[2:]
     else:
         import binmod
@@ -209,7 +210,7 @@ def nest2ring(map, nside):
     """Assumes map has shape (nmaps, npix)"""
     global _n2r
 
-    if sys.version[0:3] >= '2.6':
+    if sys.version >= '2.6':
         b = bin(nside)[2:]
     else:
         import binmod
@@ -231,12 +232,17 @@ class MapData(object):
     map array.
 
     """
-    def __init__(self, map, nside, ordering, subd=None):
+    def __init__(self, nside, ordering, map=None, subd=None):
         self.dyn_ind = 0
-        if subd is None:
-            self.subd = subd
-        else:
+        self._map = None
+        self.subd = None
+        if subd is not None:
             self.subdivide(subd)
+        if map is None:
+            if self.subd is None:
+                map = np.zeros((12*nside**2))
+            else:
+                map = np.zeros((np.append(self.subd, (1, 12*nside**2))))
         self.map = map
         self.nside = nside
         self.ordering = ordering

@@ -1,6 +1,7 @@
 import mapmod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
+import sys
 
 nside = 32
 npix = 12*nside**2
@@ -40,9 +41,12 @@ def test_init():
     def func():
         md = mapmod.MapData(map=4, nside=nside, ordering='ring')
     yield assert_raises, TypeError, func
+    #Given no map, should initialize a map of zeros with given nside
+    md = mapmod.MapData(nside=nside, ordering='ring')
+    yield ok_, np.all(md.map == np.zeros((1, npix)))
 
 def test_assign():
-    md = mapmod.MapData(map=map, nside=nside, ordering='ring')
+    md = mapmod.MapData(nside=nside, ordering='ring')
     def func():
         md.map = 4
     yield assert_raises, TypeError, func
@@ -57,14 +61,15 @@ def test_assign():
     yield assert_raises, ValueError, func
 
 def test_shape():
-    map = np.arange(npix)
-    md = mapmod.MapData(map=map, nside=nside, ordering='ring')
+    md = mapmod.MapData(nside=nside, ordering='ring')
     yield eq_, (1, npix), md.map.shape
     md.subdivide(5)
     yield eq_, (5, 1, npix), md.map.shape
+    map = np.arange(npix)
     def func():
         md.map = map
     yield assert_raises, ValueError, func
-    map = np.arange(npix)
     map.resize((2,3,4,npix))
     yield assert_raises, ValueError, func
+    md = mapmod.MapData(nside=nside, ordering='ring', subd=(3, 2))
+    yield eq_, (3, 2, 1, npix), md.map.shape
