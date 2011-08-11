@@ -20,18 +20,18 @@ def _init_r2n(nside):
     
     jrll = np.array((2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4))
     jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
-    npix = 12*nside**2
-    pixs = np.arange(1,npix+1)
-    nl2 = 2*nside
-    nl4 = 4*nside
-    ncap = nl2*(nside-1)
+    npix = 12 * nside**2
+    pixs = np.arange(1, npix + 1)
+    nl2 = 2 * nside
+    nl4 = 4 * nside
+    ncap = nl2 * (nside - 1)
 
     #South polar cap (default)
     ip = npix - pixs + 1
     hip = ip / 2.0
     fihip = hip // 1
     irs = (np.sqrt(hip - np.sqrt(fihip))).astype(int) + 1
-    iphi = 4 * irs + 1 - (ip - 2 * irs * (irs-1))
+    iphi = 4 * irs + 1 - (ip - 2 * irs * (irs - 1))
     kshift = np.zeros(npix, int)
     nr = irs
     irn = nl4 - irs 
@@ -147,14 +147,14 @@ def _mk_pix2xy():
     _pix2x = np.zeros(1024, int)
     _pix2y = np.zeros(1024, int)
 
-    #pix2x contains the sum of all odd bits, pix2y all the even ones.
+    #pix2x contains the integer repr. of all odd bits, pix2y all the even ones.
     for i in range(1024):
         b = bin(i)[2:]
-        _pix2x[i] = int(b[-1::-2], 2)
+        _pix2x[i] = int(b[-1::-2][::-1], 2)
         if len(b) == 1:
             _pix2y[i] = 0
         else:
-            _pix2y[i] = int(b[-2::-2], 2)
+            _pix2y[i] = int(b[-2::-2][::-1], 2)
 
 def degrade_average(mapd, nside_n):
     """Degrade input map to nside resolution by averaging over pixels.
