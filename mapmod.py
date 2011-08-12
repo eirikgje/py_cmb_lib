@@ -235,7 +235,8 @@ class MapData(object):
     one-dimensional array will reshape to this form. Ordering should be set
     at construction, subsequently it should be switched with switchordering().
     At this point, nside is uniquely determined by the last dimension of the
-    map array.
+    map array, and all that is needed to initialize a map is an nside. This
+    will let the MapData.map array be an array of zeroes.
 
     """
     def __init__(self, nside, ordering='ring', map=None, subd=None):
@@ -339,21 +340,16 @@ class MapData(object):
         The input map(s) must be numpy arrays, and they must have the shape
         (subd, nmaps, npix) or (subd, npix) where subd is the current
         subdivision of the map instance, npix is the number of pixels of the
-        maps already added to the object instance. If there currently are no
-        maps added to the instance, this function is equivalent to an
-        assignment (and npix can be whatever). nmaps can be any number, and if
-        this dimension is missing from the array, it will be interpreted as a
-        single map. If there are no subdivisions, a (npix) numpy array is
+        maps already added to the object instance. nmaps can be any number, 
+        and if this dimension is missing from the array, it will be interpreted 
+        as a single map. If there are no subdivisions, a (npix) numpy array is
         acceptable.
 
         """
-        if self.map is None:
-            self.map = map
-        else:
-            if np.size(map, -1) != np.size(self.map, -1):
-                raise ValueError("Incorrect number of pixels in input map")
-            map = self.conform_map(map)
-            self.map = np.append(self.map, map, axis=self.dyn_ind)
+        if np.size(map, -1) != np.size(self.map, -1):
+            raise ValueError("Incorrect number of pixels in input map")
+        map = self.conform_map(map)
+        self.map = np.append(self.map, map, axis=self.dyn_ind)
 
     def conform_map(self, map):
         """Make input map acceptable shape, or raise exception.
