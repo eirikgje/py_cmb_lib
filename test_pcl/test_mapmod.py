@@ -27,6 +27,33 @@ def test_ordering_conversion():
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
+    #Reload the module because init_r2n and init_n2r acts differently depending
+    #on whether the other has been initialized:
+    reload(mapmod)
+    md = mapmod.MapData(map=map, ordering='nested', nside=nside)
+    md.switchordering()
+    for key, value in n2rpixs.items():
+        yield eq_, md.map[0, key], value
+    md.switchordering()
+    yield ok_, np.all(map == md.map)
+
+    md = mapmod.MapData(map=map, ordering='ring', nside=nside)
+    md.switchordering()
+    for key, value in r2npixs.items():
+        yield eq_, md.map[0, key], value
+    md.switchordering()
+    yield ok_, np.all(map == md.map)
+
+    #Test for other nsides
+    nside = 2
+    npix = 12*nside**2
+    map = np.arange(npix)
+    md = mapmod.MapData(map=map, ordering='ring', nside=nside)
+    md.switchordering()
+    md.switchordering()
+    yield ok_, np.all(map == md.map)
+
+
 def test_sanity():
     md = mapmod.MapData(nside=nside)
     yield ok_, md.nside == nside

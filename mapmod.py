@@ -15,13 +15,17 @@ def _init_r2n(nside):
     global _r2n
     global _x2pix
     global _y2pix
+    npix = 12 * nside ** 2
+    #If the other is already initialized, use that information instead
+    if _n2r.has_key(nside):
+        _r2n[nside] = _n2r[nside].argsort()
+        return
     if _x2pix is None:
         _mk_xy2pix()
     
+    pixs = np.arange(npix)
     jrll = np.array((2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4))
     jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
-    npix = 12 * nside ** 2
-    pixs = np.arange(npix)
     nl2 = 2 * nside
     nl4 = 4 * nside
     ncap = nl2 * (nside - 1)
@@ -118,6 +122,10 @@ def _init_n2r(nside):
     global _n2r
     global _pix2x
     global _pix2y
+    if _r2n.has_key(nside):
+        _n2r[nside] = _r2n[nside].argsort()
+        return
+
     npix = 12 * nside * nside
     #For now: Naive almost direct implementation of the nest2ring source code
     #(but using list comprehensions instead of loops)
@@ -125,7 +133,6 @@ def _init_n2r(nside):
     jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
     if _pix2x is None:
         _mk_pix2xy()
-    #ncap = 2 * nside * (nside-1)
     nl4 = 4 * nside
     npface = nside * nside
 
@@ -149,7 +156,6 @@ def _init_n2r(nside):
     #Equatorial region
     nr[:] = nside
     n_before = 2 * nr * (2 * jr - nr - 1)
-    #n_before = ncap + nl4 * (jr - nside)
     kshift = (jr - nside) % 2
 
     #South pole
