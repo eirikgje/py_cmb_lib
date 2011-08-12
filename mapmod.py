@@ -20,45 +20,50 @@ def _init_r2n(nside):
     
     jrll = np.array((2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4))
     jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
-    npix = 12 * nside**2
+    npix = 12 * nside ** 2
     pixs = np.arange(npix)
     nl2 = 2 * nside
     nl4 = 4 * nside
     ncap = nl2 * (nside - 1)
 
-    #South polar cap (default)
+    #South polar cap 
     ip = npix - pixs
-    irs = (np.sqrt(ip * 0.5).round()).astype(int)
+    irs = (np.sqrt(ip * 0.5).round()).astype(int) #Counted from south pole
     iphi = 2 * irs * (irs + 1) - ip
-    irs, iphi = _correct_ring_phi(1, npix, irs, iphi)
+    irs, iphi = _correct_ring_phi(1, irs, iphi)
     kshift = np.zeros(npix, int)
     nr = irs
     irn = nl4 - irs 
-    face_num = iphi // irs + 8
+    face_num = iphi // irs + 8 #in {0, 11}
 
     #Equatorial region
     filter = pixs < npix - ncap
     ip[filter] = pixs[filter] - ncap
-    irn[filter] = (ip[filter] / nl4).astype(int) + nside
-    iphi[filter] = ip & (nl4 - 1) 
+    irn[filter] = ip[filter] // nl4 + nside #Counted from the north pole
+    iphi[filter] = ip % nl4  
+    # 1 if irn+nside is odd, 0 otherwise
     kshift[filter] = (irn[filter] + nside) % 2
     nr[filter] = nside
-    ire = irn[filter] - nside + 1
-    irm = nl2 + 2 - ire
-    ifm = (iphi[filter] - ire // 2 + nside) // nside
-    ifp = (iphi[filter] - irm // 2 + nside) // nside
-    face_num[filter[filter] & (ifp > ifm)] = ifp[ifp > ifm] + 7
-    face_num[filter[filter] & (ifp < ifm)] = ifp[ifp < ifm]
-    face_num[filter[filter] & (ifp == ifm)] = (ifp[ifp == ifm] & 3) + 4
+    ire = np.zeros(npix, int)
+    irm = np.zeros(npix, int)
+    ifm = np.zeros(npix, int)
+    ifp = np.zeros(npix, int)
+    ire[filter] = irn[filter] - nside + 1 # in {1, 2*nside +1}
+    irm[filter] = nl2 + 2 - ire[filter]
+    # face boundary
+    ifm[filter] = (iphi[filter] - ire[filter] // 2 + nside) // nside
+    ifp[filter] = (iphi[filter] - irm[filter] // 2 + nside) // nside
+    # (half-)faces 8 to 11
+    face_num[filter & ifp > ifm] = ifp[filter & ifp > ifm] + 7 
+    face_num[filter & ifp < ifm] = ifp[filter & ifp < ifm] # (half-)faces 0 to 3
+    # faces 4 to 7
+    face_num[filter & ifp == ifm] = (ifp[filter & ifp == ifm] & 3) + 4
 
     #North polar cap
     filter = pixs < ncap
-    #hip[filter] = pixs / 2.0
-    #fihip[filter] = hip[filter] // 1
     irn[filter] = (np.sqrt((pixs[filter] + 1) * 0.5).round()).astype(int)
     iphi[filter] = pixs[filter] - 2 * irn[filter] * (irn[filter] - 1)
-    irn[filter], iphi[filter] = _correct_ring_phi(1, npix, irn[filter],
-                                                  iphi[filter])
+    irn[filter], iphi[filter] = _correct_ring_phi(1, irn[filter], iphi[filter])
     nr[filter] = irn[filter]
     face_num[filter] = iphi[filter] // irn[filter]
 
@@ -67,7 +72,7 @@ def _init_r2n(nside):
     ipt[ipt >= nl2] = ipt[ipt >= nl2] - 8 * nside
     ix = (ipt - irt) // 2
     iy = -(ipt + irt) // 2
-    ix_low = ix & 127
+    ix_low = ix % 128
     ix_hi = ix // 128
     iy_low = iy % 128
     iy_hi = iy // 128
@@ -77,7 +82,7 @@ def _init_r2n(nside):
 
     _r2n[nside] = ipf + face_num * nside ** 2
 
-def _correct_ring_phi(location, npix, iring, iphi):
+def _correct_ring_phi(location, iring, iphi):
     delta = np.zeros(len(iphi), int)
     delta[iphi < 0] += 1
     delta[iphi >= 4 * iring] -= 1
@@ -102,14 +107,13 @@ def _init_n2r(nside):
     global _pix2x
     global _pix2y
     npix = 12 * nside * nside
-    #_n2r[nside] = np.zeros(npix)
     #For now: Naive almost direct implementation of the nest2ring source code
     #(but using list comprehensions instead of loops)
     jrll = np.array((2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4))
     jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
     if _pix2x is None:
         _mk_pix2xy()
-    ncap = 2 * nside * (nside-1)
+    #ncap = 2 * nside * (nside-1)
     nl4 = 4 * nside
     npface = nside * nside
 
@@ -120,8 +124,8 @@ def _init_n2r(nside):
     ip_trunc = ipf // 1024
     ip_med = ip_trunc % 1024
     ip_hi = ip_trunc // 1024
-    ix = 1024*_pix2x[ip_hi] + 32*_pix2x[ip_med] + _pix2x[ip_low]
-    iy = 1024*_pix2y[ip_hi] + 32*_pix2y[ip_med] + _pix2y[ip_low]
+    ix = 1024 * _pix2x[ip_hi] + 32 * _pix2x[ip_med] + _pix2x[ip_low]
+    iy = 1024 * _pix2y[ip_hi] + 32 * _pix2y[ip_med] + _pix2y[ip_low]
     jrt = ix + iy
     jpt = ix - iy
     jr = jrll[facenum] * nside - jrt - 1
@@ -132,8 +136,9 @@ def _init_n2r(nside):
 
     #Equatorial region
     nr[:] = nside
-    n_before = ncap + nl4 * (jr - nside)
-    kshift = (jr-nside)%2
+    n_before = 2 * nr * (2 * jr - nr - 1)
+    #n_before = ncap + nl4 * (jr - nside)
+    kshift = (jr - nside) % 2
 
     #South pole
     nr[jr > 3 * nside] = nl4 - jr[jr > 3 * nside]
@@ -188,7 +193,7 @@ def ring2nest(map, nside):
     """Assumes map has shape (nmaps, npix)"""
     global _r2n
     b = bin(nside)[2:]
-    if (b[0] != '1' or int(b[1:],2) !=0):
+    if (b[0] != '1' or int(b[1:],2) != 0):
         raise ValueError('nest2ring: nside has invalid value')
 
     if not _r2n.has_key(nside):

@@ -8,23 +8,24 @@ npix = 12*nside**2
 map = np.arange(npix)
 
 def test_ordering_conversion():
-    r2npixs = {0:1022, 40:1006, 7654:5386, 12287:11264}
-    n2rpixs = {0:5968, 100:5202, 345:2521, 10000:12188}
+    r2npixs = {0:15, 44:95, 112:99, 55:52}
+    n2rpixs = {0:74, 106:94, 66:135, 176:191}
+    nside = 4
+    npix = 12*nside**2
+    map = np.arange(npix)
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
     md.switchordering()
-    #for key, value in r2npixs.items():
-    #    yield eq_, md.map[0, key], value
+    for key, value in r2npixs.items():
+        yield eq_, md.map[0, key], value
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
     md.switchordering()
-    #for key, value in n2rpixs.items():
-    #    yield eq_, md.map[0, key], value
-    #Necessary with a test of the internal arrays too
-    md = mapmod.MapData(nside)
+    for key, value in n2rpixs.items():
+        yield eq_, md.map[0, key], value
     md.switchordering()
-    md.switchordering()
+    yield ok_, np.all(map == md.map)
 
 def test_sanity():
     md = mapmod.MapData(nside=nside)
