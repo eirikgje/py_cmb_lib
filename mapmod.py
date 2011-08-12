@@ -208,7 +208,6 @@ def degrade(mapd, nside_n, pixwin=None):
         degrade_average(mapd, nside_n)
 
 def ring2nest(map, nside):
-    """Assumes map has shape (nmaps, npix)"""
     global _r2n
     b = bin(nside)[2:]
     if (b[0] != '1' or int(b[1:],2) != 0):
@@ -216,10 +215,9 @@ def ring2nest(map, nside):
 
     if not _r2n.has_key(nside):
         _init_r2n(nside)
-    return map[:, _r2n[nside]]
+    return map[..., _r2n[nside]]
 
 def nest2ring(map, nside):
-    """Assumes map has shape (nmaps, npix)"""
     global _n2r
 
     b = bin(nside)[2:]
@@ -228,10 +226,10 @@ def nest2ring(map, nside):
 
     if not _n2r.has_key(nside):
         _init_n2r(nside)
-    return map[:, _n2r[nside]]
+    return map[..., _n2r[nside]]
 
 class MapData(object):
-    """Class to store and pass relevant map information.
+    """Class to store and pass relevant HEALPix map information.
 
     The basic map structure is (nmaps, npix). Assignments with a
     one-dimensional array will reshape to this form. Ordering should be set
@@ -292,13 +290,6 @@ class MapData(object):
     nside = property(getnside, setnside)
 
     def switchordering(self):
-        if self.ordering is None:
-            raise ValueError("No ordering given for map")
-        if self.map is not None:
-            if self.nside is None:
-                raise ValueError("No nside given for map")
-            if len(self.map[-1,:]) != 12*self.nside**2:
-                raise ValueError("Number of pixels incompatible with nside")
         if self.ordering == 'ring':
             if self.map is not None:
                 self.map = ring2nest(self.map, self.nside)

@@ -53,6 +53,20 @@ def test_ordering_conversion():
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
+    nside = 32
+    npix = 12*nside**2
+    map = np.arange(npix)
+    md = mapmod.MapData(map=map, ordering='ring', nside=nside)
+    md.switchordering()
+    md.switchordering()
+    yield ok_, np.all(map == md.map)
+
+    #Test for other shapes
+    md = mapmod.MapData(nside, subd=(3, 4))
+    md.switchordering()
+    md.switchordering()
+    yield eq_, md.map.shape, (3, 4, 1, npix)
+
 
 def test_sanity():
     md = mapmod.MapData(nside=nside)
