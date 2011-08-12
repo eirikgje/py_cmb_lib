@@ -34,6 +34,7 @@ def _init_r2n(nside):
     nr = np.zeros(npix, int)
     irn = np.zeros(npix, int)
     face_num = np.zeros(npix, int)
+    kshift = np.zeros(npix, int)
 
     #South polar cap 
     filter = pixs >= npix - ncap 
@@ -41,10 +42,10 @@ def _init_r2n(nside):
     irs[filter] = (np.sqrt(ip[filter] * 0.5).round()).astype(int) 
     iphi[filter] = 2 * irs[filter] * (irs[filter] + 1) - ip[filter]
     irs[filter], iphi[filter] = _correct_ring_phi(1, irs[filter], iphi[filter])
-    kshift = np.zeros(npix, int)
     nr[filter] = irs[filter]
     irn[filter] = nl4 - irs[filter] 
     face_num[filter] = iphi[filter] // irs[filter] + 8 #in {0, 11}
+    kshift[filter] = 0
 
     #Equatorial region
     filter = (pixs < npix - ncap) & (pixs >= ncap)
@@ -77,6 +78,7 @@ def _init_r2n(nside):
     irn[filter], iphi[filter] = _correct_ring_phi(1, irn[filter], iphi[filter])
     nr[filter] = irn[filter]
     face_num[filter] = iphi[filter] // irn[filter]
+    kshift[filter] = 0
 
     irt = irn - jrll[face_num] * nside + 1
     ipt = 2 * iphi - jpll[face_num] * nr - kshift + 1
