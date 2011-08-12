@@ -25,22 +25,32 @@ def _init_r2n(nside):
     nl2 = 2 * nside
     nl4 = 4 * nside
     ncap = nl2 * (nside - 1)
+    
+    #irn: Ring number, counted from north pole
+    #irs: Ring number, counted from south pole
+    ip = np.zeros(npix, int)
+    irs = np.zeros(npix, int)
+    iphi = np.zeros(npix, int)
+    nr = np.zeros(npix, int)
+    irn = np.zeros(npix, int)
+    face_num = np.zeros(npix, int)
 
     #South polar cap 
-    ip = npix - pixs
-    irs = (np.sqrt(ip * 0.5).round()).astype(int) #Counted from south pole
-    iphi = 2 * irs * (irs + 1) - ip
-    irs, iphi = _correct_ring_phi(1, irs, iphi)
+    filter = pixs >= npix - ncap 
+    ip[filter] = npix - pixs[filter]
+    irs[filter] = (np.sqrt(ip[filter] * 0.5).round()).astype(int) 
+    iphi[filter] = 2 * irs[filter] * (irs[filter] + 1) - ip[filter]
+    irs[filter], iphi[filter] = _correct_ring_phi(1, irs[filter], iphi[filter])
     kshift = np.zeros(npix, int)
-    nr = irs
-    irn = nl4 - irs 
-    face_num = iphi // irs + 8 #in {0, 11}
+    nr[filter] = irs[filter]
+    irn[filter] = nl4 - irs[filter] 
+    face_num[filter] = iphi[filter] // irs[filter] + 8 #in {0, 11}
 
     #Equatorial region
-    filter = pixs < npix - ncap
+    filter = (pixs < npix - ncap) & (pixs >= ncap)
     ip[filter] = pixs[filter] - ncap
-    irn[filter] = ip[filter] // nl4 + nside #Counted from the north pole
-    iphi[filter] = ip % nl4  
+    irn[filter] = ip[filter] // nl4 + nside 
+    iphi[filter] = ip[filter] % nl4  
     # 1 if irn+nside is odd, 0 otherwise
     kshift[filter] = (irn[filter] + nside) % 2
     nr[filter] = nside
@@ -54,10 +64,11 @@ def _init_r2n(nside):
     ifm[filter] = (iphi[filter] - ire[filter] // 2 + nside) // nside
     ifp[filter] = (iphi[filter] - irm[filter] // 2 + nside) // nside
     # (half-)faces 8 to 11
-    face_num[filter & ifp > ifm] = ifp[filter & ifp > ifm] + 7 
-    face_num[filter & ifp < ifm] = ifp[filter & ifp < ifm] # (half-)faces 0 to 3
+    face_num[filter & (ifp > ifm)] = ifp[filter & (ifp > ifm)] + 7 
+    # (half-)faces 0 to 3
+    face_num[filter & (ifp < ifm)] = ifp[filter & (ifp < ifm)] 
     # faces 4 to 7
-    face_num[filter & ifp == ifm] = (ifp[filter & ifp == ifm] & 3) + 4
+    face_num[filter & (ifp == ifm)] = (ifp[filter & (ifp == ifm)] & 3) + 4
 
     #North polar cap
     filter = pixs < ncap
@@ -89,7 +100,6 @@ def _correct_ring_phi(location, iring, iphi):
     iring[delta != 0] = iring[delta != 0] - location * delta[delta != 0]
     iphi[delta != 0] = iphi[delta != 0] + delta[delta != 0] * (4
                                                         * iring[delta != 0])
-
     return iring, iphi
 
 def _mk_xy2pix():
