@@ -1,3 +1,4 @@
+from __future__ import division
 import mapmod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
@@ -128,3 +129,18 @@ def test_shape():
     yield assert_raises, ValueError, func
     md = mapmod.MapData(nside, subd=(3, 2))
     yield eq_, (3, 2, 1, npix), md.map.shape
+
+def test_degrade():
+    nside = 4
+    npix = 12*nside**2
+    map = np.arange(npix)
+    nmap = np.arange(12*2*2)
+    for i in range(12*2*2):
+        sum = 0
+        for j in range(4):
+            sum += map[4*i + j]
+        nmap[i] = sum
+    nmap = nmap / 4
+    md = mapmod.MapData(nside, map=map, ordering='nested')
+    mapmod.degrade(md, nside_n=2)
+    yield ok_, np.all(nmap == md.map)

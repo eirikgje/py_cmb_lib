@@ -193,19 +193,22 @@ def _mk_pix2xy():
 def degrade_average(mapd, nside_n):
     """Degrade input map to nside resolution by averaging over pixels.
     
-    Output map will be in nested ordering, no matter what the input map was.
     """
+    switched = False
     if mapd.ordering == 'ring':
+        switched = True
         mapd.switchordering()
 
     redfact = (mapd.nside/nside_n)**2
     mapd.map = np.reshape(mapd.map, (12*nside_n*nside_n, redfact))
     mapd.map = np.average(mapd.map, axis=1)
     mapd.nside = nside_n
+    if switched: mapd.switchordering()
+    return mapd
 
 def degrade(mapd, nside_n, pixwin=None):
     if pixwin is None:
-        degrade_average(mapd, nside_n)
+        return degrade_average(mapd, nside_n)
 
 def ring2nest(map, nside):
     global _r2n
