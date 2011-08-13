@@ -243,12 +243,15 @@ class MapData(object):
     will let the MapData.map array be an array of zeroes.
 
     """
-    def __init__(self, nside, ordering='ring', map=None, subd=None):
+    def __init__(self, nside, ordering='ring', map=None, lsubd=None,
+                 rsubd=None):
         self.dyn_ind = 0
         self._map = None
         self.subd = None
-        if subd is not None:
-            self.subdivide(subd)
+        if lsubd is not None:
+            self.subdivide(lsubd)
+        if rsubd is not None:
+            self.subdivide(rsubd, left_of_dyn_d=False)
         if map is None:
             if self.subd is None:
                 map = np.zeros((12*nside**2))
@@ -304,7 +307,7 @@ class MapData(object):
                 self.map = nest2ring(self.map, self.nside)
             self.ordering='ring'
 
-    def subdivide(self, vals):
+    def subdivide(self, vals, left_of_dyn_d=True):
         """Can take either int, tuple or numpy arrays as arguments.
         
         By default, subdividing will be done in such a way that the dynamical
@@ -321,22 +324,40 @@ class MapData(object):
         be the leftmost dimension in the resulting MapData.map array.
 
         """
+        old_dyn_ind = self.dyn_ind
         if isinstance(vals, int):
-            self.dyn_ind += 1
+            if left_of_dyn_d:
+                self.dyn_ind += 1
         elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
-            self.dyn_ind += np.size(vals)
+            if left_of_dyn_d:
+                self.dyn_ind += np.size(vals)
         else:
             raise TypeError('Must be int, tuple or np.ndarray')
 
         if self.subd is None:
-            self.subd = np.array(vals)
+            if isinstance(vals, int):
+                self.subd = np.array((vals,))
+            else:
+                self.subd = np.array(vals)
         else:
-            self.subd = np.append(vals, self.subd)
+            if left_of_dyn_d:
+                self.subd = np.append(vals, self.subd)
+            else:
+                self.subd = np.append(self.subd, vals)
 
         if self.map is not None:
-            self._map = np.resize(self._map, np.append(self.subd, 
-                                    (np.size(self._map, -2), 
-                                    np.size(self._map, -1))))
+            #TODO: Preferrable to do this without loop
+            newshape = np.zeros(len(self.subd) + 2)
+            k = 0
+            for i in range(len(newshape)):
+                if i == self.dyn_ind:
+                    newshape[i] = np.size(self.map, old_dyn_ind)
+                elif i == (len(newshape) - 1):
+                    newshape[i] = np.size(self.map, -1)
+                else:
+                    newshape[i] = self.subd[k]
+                    k += 1
+            self._map = np.resize(self.map, newshape)
 
     def appendmaps(self, map):
         """Add one or several maps to object instance.
@@ -378,7 +399,7 @@ class MapData(object):
             elif mlen < map.ndim:
                 raise ValueError('Too many dimensions in map')
             if mlen == map.ndim:
-                if any(np.shape(map)[:-2] != self.subd):
+                if np.any(np.shape(map)[:-2] != self.subd):
                     raise ValueError("""Map dimensions do not conform to MapData
                                     subdivision""")
             elif mlen == map.ndim + 1:
