@@ -199,9 +199,10 @@ def degrade_average(mapd, nside_n):
         switched = True
         mapd.switchordering()
 
-    redfact = (mapd.nside/nside_n)**2
-    mapd.map = np.reshape(mapd.map, (12*nside_n*nside_n, redfact))
-    mapd.map = np.average(mapd.map, axis=1)
+    redfact = (mapd.nside//nside_n)**2
+    temp = np.reshape(mapd.map, np.append(mapd.map.shape[:-1], 
+                        (12*nside_n*nside_n, redfact)))
+    mapd.map = np.average(temp, axis=-1)
     mapd.nside = nside_n
     if switched: mapd.switchordering()
     return mapd

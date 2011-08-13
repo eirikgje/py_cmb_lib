@@ -142,5 +142,10 @@ def test_degrade():
         nmap[i] = sum
     nmap = nmap / 4
     md = mapmod.MapData(nside, map=map, ordering='nested')
-    mapmod.degrade(md, nside_n=2)
+    md = mapmod.degrade(md, nside_n=2)
+    yield ok_, np.all(nmap == md.map)
+    md = mapmod.MapData(nside, map=map, ordering='nested')
+    md.subdivide((5, 6))
+    nmap = np.resize(nmap, (5, 6, 1, 12*2*2))
+    md = mapmod.degrade(md, nside_n=2)
     yield ok_, np.all(nmap == md.map)
