@@ -99,6 +99,14 @@ def test_init():
     #Given no map, should initialize a map of zeros with given nside
     md = mapmod.MapData(nside=nside)
     yield ok_, np.all(md.map == np.zeros((1, npix)))
+    md = mapmod.MapData(nside, lsubd=(3, 4))
+    yield eq_, (3, 4, 1, npix), md.map.shape
+    md = mapmod.MapData(nside, rsubd=(2, 5))
+    yield eq_, (1, 2, 5, npix), md.map.shape
+    md = mapmod.MapData(nside, lsubd=6, rsubd=(2, 5))
+    yield eq_, (6, 1, 2, 5, npix), md.map.shape
+    md = mapmod.MapData(nside, lsubd=(6, 3), rsubd=2)
+    yield eq_, (6, 3, 1, 2, npix), md.map.shape
 
 def test_assign():
     md = mapmod.MapData(nside)
@@ -165,10 +173,28 @@ def test_shape():
     md.subdivide(4)
     yield eq_, (4, 1, 3, 5, npix), md.map.shape
 
-#def test_pol():
-#    #Testing the polarization feature
-#    md = mapmod.MapData(nside, pol=True)
-#    yield eq_, (1, 3, npix), md.map.shape
+def test_pol():
+    #Testing the polarization feature
+    md = mapmod.MapData(nside, pol=True)
+    yield eq_, (1, 3, npix), md.map.shape
+    map = np.reshape(np.arange(3*npix), (1, 3, npix))
+    md.map = map
+    yield ok_, np.all(map == md.map)
+    md = mapmod.MapData(nside)
+    md.pol = True
+    yield eq_, (1, 3, npix), md.map.shape
+    #'pol' keyword is only supposed to be a 'compatibility flag' - i.e., if 
+    #the MapData object already is compatible, then do nothing
+    map = np.reshape(np.arange(3*npix), (1, 3, npix))
+    md = mapmod.MapData(nside, rsubd=3, map=map)
+    map1 = md.map
+    md.pol = True
+    yield ok_, np.all(map1 == md.map)
+    #Other way around:
+    md = mapmod.MapData(nside, pol=True)
+    map = md.map
+    md.pol = False
+    yield ok_, np.all(map == md.map)
 
 def test_degrade():
     nside = 4

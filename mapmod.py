@@ -244,19 +244,18 @@ class MapData(object):
 
     """
     def __init__(self, nside, ordering='ring', map=None, lsubd=None,
-                 rsubd=None):
+                 rsubd=None, pol=False):
         self.dyn_ind = 0
         self._map = None
-        self.subd = None
+        self.subd = ()
+        self.pol = pol
         if lsubd is not None:
             self.subdivide(lsubd)
         if rsubd is not None:
             self.subdivide(rsubd, left_of_dyn_d=False)
         if map is None:
-            if self.subd is None:
-                map = np.zeros((12*nside**2))
-            else:
-                map = np.zeros((np.append(self.subd, (1, 12*nside**2))))
+            map = np.zeros(self.subd[0:self.dyn_ind] + (1,) + 
+                           self.subd[self.dyn_ind:] + (12*nside**2,))
         self.map = map
         self.nside = nside
         self.ordering = ordering
@@ -297,6 +296,23 @@ class MapData(object):
 
     nside = property(getnside, setnside)
 
+    def getpol(self):
+        return self._pol
+
+    def setpol(self, pol):
+        if not isinstance(pol, bool):
+            raise TypeError("pol must be a boolean variable")
+        if pol:
+            if len(self.subd) > 0:
+                if not self.subd[-1] == 3:
+                    self.subdivide(3, left_of_dyn_d=False)
+            else:
+                self.subdivide(3, left_of_dyn_d=False)
+        self._pol = pol
+
+    pol = property(getpol, setpol)
+
+
     def switchordering(self):
         if self.ordering == 'ring':
             if self.map is not None:
@@ -315,8 +331,10 @@ class MapData(object):
         (the last one being the number of map pixels). Note that adding samples
         should have nothing to do with subdividing - subdividing is for those
         cases where each sample will have more than one map (polarization, 
-        various frequencies etc.) Also note that after subdividing, each
-        map array added (or assigned) to the MapData instance must have the
+        various frequencies etc.) Note, however, that for polarization it is
+        possible to just set the 'pol' keyword to True for the object, and the 
+        subdivision will be taken care of. Also note that after subdividing, 
+        each map array added (or assigned) to the MapData instance must have the
         shape (x1, x2, ..., xn, n, npix) or (x1, x2, ..., xn, npix) where
         x1, x2, ..., xn are the subdivisions and n is the number of map samples
         added (could be 1 and will be interpreted as 1 if missing). 
@@ -334,35 +352,18 @@ class MapData(object):
         else:
             raise TypeError('Must be int, tuple or np.ndarray')
 
-        if self.subd is None:
+        if left_of_dyn_d:
             if isinstance(vals, int):
-                self.subd = (vals,)
+                self.subd = (vals,) + self.subd
             else:
-                self.subd = tuple(vals)
+                self.subd = tuple(vals) + self.subd
         else:
-            if left_of_dyn_d:
-                if isinstance(vals, int):
-                    self.subd = (vals,) + self.subd
-                else:
-                    self.subd = tuple(vals) + self.subd
+            if isinstance(vals, int):
+                self.subd = self.subd + (vals,)
             else:
-                if isinstance(vals, int):
-                    self.subd = self.subd + (vals,)
-                else:
-                    self.subd = self.subd + tuple(vals)
+                self.subd = self.subd + tuple(vals)
 
         if self.map is not None:
-            #TODO: Preferrable to do this without loop
-            #newshape = np.zeros(len(self.subd) + 2)
-            #k = 0
-            #for i in range(len(newshape)):
-            #    if i == self.dyn_ind:
-            #        newshape[i] = np.size(self.map, old_dyn_ind)
-            #    elif i == (len(newshape) - 1):
-            #        newshape[i] = np.size(self.map, -1)
-            #    else:
-            #        newshape[i] = self.subd[k]
-            #        k += 1
             self._map = np.resize(self.map, self.subd[0:self.dyn_ind] +
                                   (self.map.shape[old_dyn_ind],) +
                                   self.subd[self.dyn_ind:] +
@@ -394,33 +395,28 @@ class MapData(object):
         """
         if not isinstance(map, np.ndarray):
             raise TypeError('Map must be numpy array')
-        if self.subd == None:
-            if map.ndim == 1:
-                map = map.reshape((1, np.size(map)))
-            elif map.ndim > 2:
-                raise ValueError('Too many dimensions in map')
-            elif map.ndim < 1:
-                raise ValueError('Too few dimensions in map')
-        else:
-            mlen = np.size(self.subd) + 2
-            if mlen > map.ndim + 1:
-                raise ValueError('Too few dimensions in map')
-            elif mlen < map.ndim:
-                raise ValueError('Too many dimensions in map')
-            if mlen == map.ndim:
-                #Explicit dynamic dimension
-                mapsubd = (map.shape[0:self.dyn_ind] + 
-                           map.shape[self.dyn_ind + 1:-1])
-                if (mapsubd != self.subd):
-                    raise ValueError("""Map dimensions do not conform to MapData
-                                    subdivision""")
-            elif mlen == map.ndim + 1:
-                #Dynamic dimension is implicit
-                mapsubd = (map.shape[0:-1])
-                if (mapsubd  != self.subd):
-                    raise ValueError("""Map dimensions do not conform to MapData
-                                    subdivision""")
-                else:
-                    map = map.reshape((np.append(self.subd, 
-                                        (1, np.size(map, -1)))))
+        mlen = len(self.subd) + 2
+        if mlen > map.ndim + 1:
+            raise ValueError('Too few dimensions in map')
+        elif mlen < map.ndim:
+            raise ValueError('Too many dimensions in map')
+        if mlen == map.ndim:
+            #Explicit dynamic dimension
+            mapsubd = (map.shape[0:self.dyn_ind] + 
+                        map.shape[self.dyn_ind + 1:-1])
+            if (mapsubd != self.subd):
+                print mapsubd
+                print self.subd
+                raise ValueError("""Map dimensions do not conform to MapData
+                                subdivision""")
+        elif mlen == map.ndim + 1:
+            #Dynamic dimension is implicit
+            mapsubd = (map.shape[0:-1])
+            if (mapsubd  != self.subd):
+                raise ValueError("""Map dimensions do not conform to MapData
+                                subdivision""")
+            else:
+                map = map.reshape(self.subd[0:self.dyn_ind] + (1,) + 
+                                  self.subd[self.dyn_ind:] + 
+                                  (np.size(map, -1),))
         return map
