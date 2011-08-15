@@ -121,7 +121,19 @@ def test_assign():
     map = np.zeros((3, npix))
     def func():
         md.map = map
-    yield ok_, func
+
+    md = mapmod.MapData(nside)
+    md.subdivide((3, 4), left_of_dyn_d=False)
+    map = np.zeros((3, 4, npix))
+    try:
+        md.map = map
+    except:
+        raise AssertFailed()
+    map = np.zeros((1, 3, 4, npix))
+    try:
+        md.map = map
+    except:
+        raise AssertionError()
 def test_shape():
     md = mapmod.MapData(nside)
     yield eq_, (1, npix), md.map.shape
@@ -132,6 +144,8 @@ def test_shape():
         md.map = map
     yield assert_raises, ValueError, func
     map.resize((2, 3, 4,npix))
+    def func():
+        md.map = map
     yield assert_raises, ValueError, func
     md = mapmod.MapData(nside, lsubd=(3, 2))
     yield eq_, (3, 2, 1, npix), md.map.shape
@@ -150,6 +164,11 @@ def test_shape():
     md.subdivide((3, 5), left_of_dyn_d=False)
     md.subdivide(4)
     yield eq_, (4, 1, 3, 5, npix), md.map.shape
+
+#def test_pol():
+#    #Testing the polarization feature
+#    md = mapmod.MapData(nside, pol=True)
+#    yield eq_, (1, 3, npix), md.map.shape
 
 def test_degrade():
     nside = 4

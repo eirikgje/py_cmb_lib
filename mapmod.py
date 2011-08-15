@@ -330,34 +330,43 @@ class MapData(object):
                 self.dyn_ind += 1
         elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
             if left_of_dyn_d:
-                self.dyn_ind += np.size(vals)
+                self.dyn_ind += len(vals)
         else:
             raise TypeError('Must be int, tuple or np.ndarray')
 
         if self.subd is None:
             if isinstance(vals, int):
-                self.subd = np.array((vals,))
+                self.subd = (vals,)
             else:
-                self.subd = np.array(vals)
+                self.subd = tuple(vals)
         else:
             if left_of_dyn_d:
-                self.subd = np.append(vals, self.subd)
+                if isinstance(vals, int):
+                    self.subd = (vals,) + self.subd
+                else:
+                    self.subd = tuple(vals) + self.subd
             else:
-                self.subd = np.append(self.subd, vals)
+                if isinstance(vals, int):
+                    self.subd = self.subd + (vals,)
+                else:
+                    self.subd = self.subd + tuple(vals)
 
         if self.map is not None:
             #TODO: Preferrable to do this without loop
-            newshape = np.zeros(len(self.subd) + 2)
-            k = 0
-            for i in range(len(newshape)):
-                if i == self.dyn_ind:
-                    newshape[i] = np.size(self.map, old_dyn_ind)
-                elif i == (len(newshape) - 1):
-                    newshape[i] = np.size(self.map, -1)
-                else:
-                    newshape[i] = self.subd[k]
-                    k += 1
-            self._map = np.resize(self.map, newshape)
+            #newshape = np.zeros(len(self.subd) + 2)
+            #k = 0
+            #for i in range(len(newshape)):
+            #    if i == self.dyn_ind:
+            #        newshape[i] = np.size(self.map, old_dyn_ind)
+            #    elif i == (len(newshape) - 1):
+            #        newshape[i] = np.size(self.map, -1)
+            #    else:
+            #        newshape[i] = self.subd[k]
+            #        k += 1
+            self._map = np.resize(self.map, self.subd[0:self.dyn_ind] +
+                                  (self.map.shape[old_dyn_ind],) +
+                                  self.subd[self.dyn_ind:] +
+                                  (self.map.shape[-1],))
 
     def appendmaps(self, map):
         """Add one or several maps to object instance.
@@ -399,11 +408,16 @@ class MapData(object):
             elif mlen < map.ndim:
                 raise ValueError('Too many dimensions in map')
             if mlen == map.ndim:
-                if np.any(np.shape(map)[:-2] != self.subd):
+                #Explicit dynamic dimension
+                mapsubd = (map.shape[0:self.dyn_ind] + 
+                           map.shape[self.dyn_ind + 1:-1])
+                if (mapsubd != self.subd):
                     raise ValueError("""Map dimensions do not conform to MapData
                                     subdivision""")
             elif mlen == map.ndim + 1:
-                if (any(np.shape(map)[:-1] != self.subd)):
+                #Dynamic dimension is implicit
+                mapsubd = (map.shape[0:-1])
+                if (mapsubd  != self.subd):
                     raise ValueError("""Map dimensions do not conform to MapData
                                     subdivision""")
                 else:
