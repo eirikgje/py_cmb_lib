@@ -232,6 +232,30 @@ def nest2ring(map, nside):
         _init_n2r(nside)
     return map[..., _n2r[nside]]
 
+def ring2nest_ind(ind, nside):
+    global _r2n
+
+    b = bin(nside)[2:]
+    if (b[0] != '1' or int(b[1:], 2) != 0):
+        raise ValueError('ring2nest_ind: nside has invalid value')
+    if not _r2n.has_key(nside):
+        _init_r2n(nside)
+
+    return _r2n[nside][ind]
+
+def nest2ring_ind(ind, nside):
+    global _n2r
+
+    b = bin(nside)[2:]
+    if (b[0] != '1' or int(b[1:], 2) != 0):
+        raise ValueError('nest2ring_ind: nside has invalid value')
+
+    if not _n2r.has_key(nside):
+        _init_n2r(nside)
+
+    return _n2r[nside][ind]
+
+
 class MapData(object):
     """Class to store and pass relevant HEALPix map information.
 

@@ -68,6 +68,13 @@ def test_ordering_conversion():
     md.switchordering()
     yield eq_, md.map.shape, (3, 4, 1, npix)
 
+    #Test the pixel versions as well
+    nside = 4
+    for key, value in r2npixs.items():
+        yield eq_, mapmod.ring2nest_ind(key, nside), value
+    for key, value in n2rpixs.items():
+        yield eq_, mapmod.nest2ring_ind(key, nside), value
+
 
 def test_sanity():
     md = mapmod.MapData(nside=nside)
