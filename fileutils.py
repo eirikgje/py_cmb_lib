@@ -24,4 +24,4 @@ def read_fits_map(fname):
 def write_fits_map(fname, md, bintab=True):
     #So far will only write information that is actually needed for this
     #library. Could cause compatibility problems later.
-    #if bintab:
+    if bintab:

@@ -396,7 +396,8 @@ class MapData(object):
     def appendmaps(self, map):
         """Add one or several maps to object instance.
 
-        The input map(s) must be numpy arrays, and they must have the shape
+        The input map(s) must be numpy arrays, or MapData objects
+        and they must have the shape
         (subd, nmaps, npix) or (subd, npix) where subd is the current
         subdivision of the map instance, npix is the number of pixels of the
         maps already added to the object instance. nmaps can be any number, 
@@ -405,6 +406,10 @@ class MapData(object):
         acceptable.
 
         """
+        if isinstance(map, MapData):
+            if map.nside != self.nside:
+                raise ValueError("Nside is not compatible")
+            map = map.map
         if np.size(map, -1) != np.size(self.map, -1):
             raise ValueError("Incorrect number of pixels in input map")
         map = self.conform_map(map)

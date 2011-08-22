@@ -265,3 +265,12 @@ def test_appendmaps():
     combmap = np.append(combmap, map, axis=1)
     yield ok_, np.all(combmap == md.map)
     yield eq_, (3, 3, 8, 10, npix), md.map.shape
+    #Should be possible to append a MapData object as well
+    md = mapmod.MapData(nside)
+    md2 = mapmod.MapData(nside)
+    md.appendmaps(md2)
+    yield eq_, (2, npix), md.map.shape
+    md2 = mapmod.MapData(nside*2)
+    def func():
+        md.appendmaps(md2)
+    yield assert_raises, ValueError, func
