@@ -57,3 +57,11 @@ def write_fits_map(fname, md, bintab=True):
         thdulist.writeto(fname)
     else:
         raise NotImplementedError()
+
+def read_fits_alms(fname):
+    hdulist = pyfits.open(fname)
+    data = hdulist[1].data
+    tabhdr = hdulist[1].header
+    pol = header['polar']
+    lmax = header['max-lpol']
+    mmax = header['max-mpol']
