@@ -25,6 +25,6 @@ def test_sanity():
     alms = np.arange(numind)
     ad = almmod.AlmData(lmax, alms=alms)
     yield ok_, np.all(ad.alms == alms)
-    ad = almmod.AlmData(nside, lsubd=(3, 2, 1))
+    ad = almmod.AlmData(lmax, lsubd=(3, 2, 1))
     yield ok_, np.all((3, 2, 1) == ad.subd)
 

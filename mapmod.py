@@ -288,8 +288,7 @@ class MapData(object):
         return self._map
 
     def setmap(self, map):
-        map = self.conform_map(map)
-        self._map = map
+        self._map = self.conform_map(map)
 
     map = property(getmap, setmap)
 
@@ -399,7 +398,7 @@ class MapData(object):
         The input map(s) must be numpy arrays, or MapData objects
         and they must have the shape
         (subd, nmaps, npix) or (subd, npix) where subd is the current
-        subdivision of the map instance, npix is the number of pixels of the
+        subdivision of the MapData instance, npix is the number of pixels of the
         maps already added to the object instance. nmaps can be any number, 
         and if this dimension is missing from the array, it will be interpreted 
         as a single map. If there are no subdivisions, a (npix) numpy array is
