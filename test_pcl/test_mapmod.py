@@ -83,7 +83,6 @@ def test_sanity():
     yield ok_, md.ordering == 'ring'
     md = mapmod.MapData(nside, ordering='nested')
     yield ok_, md.ordering == 'nested'
-    map = np.arange(npix)
     md = mapmod.MapData(nside, map=map)
     yield ok_, np.all(md.map == map)
     md = mapmod.MapData(nside, lsubd=(3, 2, 1))
@@ -143,12 +142,13 @@ def test_assign():
     try:
         md.map = map
     except:
-        raise AssertFailed()
+        raise AssertionError()
     map = np.zeros((1, 3, 4, npix))
     try:
         md.map = map
     except:
         raise AssertionError()
+
 def test_shape():
     md = mapmod.MapData(nside)
     yield eq_, (1, npix), md.map.shape

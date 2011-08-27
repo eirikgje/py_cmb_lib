@@ -7,7 +7,7 @@ def ind2lm():
 def lm2ind():
     pass
 
-class AlmData:
+class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, lsubd=None, rsubd=None,
                  pol=False):
         if mmax != None:
@@ -45,7 +45,7 @@ class AlmData:
         else:
             if np.size(self.alms, -2) != lmax * (lmax + 1) / 2 + lmax + 1:
                 raise ValueError("""lmax must be compatible with last
-                                    dimension of map""")
+                                    dimension of alm""")
             self._lmax = lmax
 
     lmax = property(getlmax, setlmax)
@@ -73,7 +73,7 @@ class AlmData:
 #        index (i.e. number of alm samples or whatever) is the next-to-last one
 #        (the last one being the number of els). Note that adding samples
 #        should have nothing to do with subdividing - subdividing is for those
-#        cases where each sample will have more than one map (polarization, 
+#        cases where each sample will have more than one alm (polarization, 
 #        various frequencies etc.) Note, however, that for polarization it is
 #        possible to just set the 'pol' keyword to True for the object, and the 
 #        subdivision will be taken care of. Also note that after subdividing, 
@@ -130,42 +130,42 @@ class AlmData:
             if alms.lmax != self.lmax:
                 raise ValueError("Lmax is not compatible")
             alms = alms.alms
-        if np.size(map, -1) != np.size(self.map, -1):
-            raise ValueError("Incorrect number of pixels in input map")
-        self.map = np.append(self.map, self.conform_alms(alms), 
+        if np.size(alms, -1) != 2:
+            raise ValueError("Last dimension of alms must be 2")
+        if np.size(alms, -2) != np.size(self.alms, -2):
+            raise ValueError("Incorrect number of elements in input alms")
+        self.alms = np.append(self.alms, self.conform_alms(alms), 
                              axis=self.dyn_ind)
 
-    def conform_alms(self, map):
-        """Make input map acceptable shape, or raise exception.
+    def conform_alms(self, alms):
+        """Make input alms acceptable shape, or raise exception.
         
-        Input map is only compared to the current subdivision, not any present
-        maps.
+        Input alms is only compared to the current subdivision, not any present
+        alms.
         
         """
-        if not isinstance(map, np.ndarray):
-            raise TypeError('Map must be numpy array')
-        mlen = len(self.subd) + 2
-        if mlen > map.ndim + 1:
-            raise ValueError('Too few dimensions in map')
-        elif mlen < map.ndim:
-            raise ValueError('Too many dimensions in map')
-        if mlen == map.ndim:
+        if not isinstance(alms, np.ndarray):
+            raise TypeError('Alms must be numpy array')
+        mlen = len(self.subd) + 3
+        if mlen > alms.ndim + 1:
+            raise ValueError('Too few dimensions in alms')
+        elif mlen < alms.ndim:
+            raise ValueError('Too many dimensions in alms')
+        if mlen == alms.ndim:
             #Explicit dynamic dimension
-            mapsubd = (map.shape[0:self.dyn_ind] + 
-                        map.shape[self.dyn_ind + 1:-1])
-            if (mapsubd != self.subd):
-                print mapsubd
-                print self.subd
-                raise ValueError("""Map dimensions do not conform to MapData
+            almsubd = (alms.shape[0:self.dyn_ind] + 
+                        alms.shape[self.dyn_ind + 1:-2])
+            if (almsubd != self.subd):
+                raise ValueError("""Alm dimensions do not conform to AlmData
                                 subdivision""")
-        elif mlen == map.ndim + 1:
+        elif mlen == alms.ndim + 1:
             #Dynamic dimension is implicit
-            mapsubd = (map.shape[0:-1])
-            if (mapsubd  != self.subd):
-                raise ValueError("""Map dimensions do not conform to MapData
+            almsubd = (alms.shape[0:-2])
+            if (almsubd  != self.subd):
+                raise ValueError("""Alm dimensions do not conform to AlmData
                                 subdivision""")
             else:
-                map = map.reshape(self.subd[0:self.dyn_ind] + (1,) + 
+                alms = alms.reshape(self.subd[0:self.dyn_ind] + (1,) + 
                                   self.subd[self.dyn_ind:] + 
-                                  (np.size(map, -1),))
-        return map
+                                  alms.shape[-2:])
+        return alms

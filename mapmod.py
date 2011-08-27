@@ -446,5 +446,5 @@ class MapData(object):
             else:
                 map = map.reshape(self.subd[0:self.dyn_ind] + (1,) + 
                                   self.subd[self.dyn_ind:] + 
-                                  (np.size(map, -1),))
+                                  (map.shape[-1],))
         return map
