@@ -36,6 +36,7 @@ def test_sanity():
     yield ok_, np.all((3, 2, 1) == ad.subd)
 
 def test_init():
+    alms = shaperange_cplx((nels,))
     def func():
         ad = almmod.AlmData(lmax=95.0)
     yield assert_raises, TypeError, func
@@ -57,6 +58,11 @@ def test_init():
     yield eq_, (6, 1, 2, 5, nels), ad.alms.shape
     ad = almmod.AlmData(lmax, lsubd=(6, 3), rsubd=2)
     yield eq_, (6, 3, 1, 2, nels), ad.alms.shape
+    #Should not be able to init with a non-complex array
+    alms = np.arange(nels)
+    def func():
+        ad = almmod.AlmData(lmax=lmax, alms=alms)
+    yield assert_raises, TypeError, func
 
 def test_assign():
     ad = almmod.AlmData(lmax)
@@ -75,12 +81,12 @@ def test_assign():
 
     ad = almmod.AlmData(lmax)
     ad.subdivide((3, 4), left_of_dyn_d=False)
-    alms = np.zeros((3, 4, nels))
+    alms = np.zeros((3, 4, nels), dtype=np.complex64)
     try:
         ad.alms = alms
     except:
         raise AssertionError()
-    alms = np.zeros((1, 3, 4, nels))
+    alms = np.zeros((1, 3, 4, nels), dtype=np.complex64)
     try:
         ad.alms = alms
     except:

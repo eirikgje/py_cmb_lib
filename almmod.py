@@ -145,6 +145,10 @@ class AlmData(object):
         """
         if not isinstance(alms, np.ndarray):
             raise TypeError('Alms must be numpy array')
+        if not alms.dtype.name.startswith('complex'):
+            raise TypeError("alms must be complex array")
+        if alms.dtype != np.complex64:
+            raise NotImplementedError()
         mlen = len(self.subd) + 2
         if mlen > alms.ndim + 1:
             raise ValueError('Too few dimensions in alms')
