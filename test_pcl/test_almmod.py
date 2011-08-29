@@ -91,6 +91,10 @@ def test_assign():
         ad.alms = alms
     except:
         raise AssertionError()
+    alms = np.arange(nels)
+    def func():
+        ad.alms = alms
+    yield assert_raises, TypeError, func
 
 def test_shape():
     ad = almmod.AlmData(lmax)
