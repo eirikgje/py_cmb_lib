@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 import pyfits
 import mapmod
+import almmod
 
 def read_fits_map(fname):
     #This will expand as need arises, for now, pretty ad-hoc
@@ -61,7 +62,15 @@ def write_fits_map(fname, md, bintab=True):
 def read_fits_alms(fname):
     hdulist = pyfits.open(fname)
     data = hdulist[1].data
-    tabhdr = hdulist[1].header
+    header = hdulist[1].header
     pol = header['polar']
     lmax = header['max-lpol']
     mmax = header['max-mpol']
+    ad = almmod.AlmData(lmax, pol=pol)
+    if pol:
+        for i in range(1, 4):
+            real = hdulist[i].data.field('REAL')
+            imag = hdulist[i].data.field('IMAG')
+            ad.alms[0, i-1] = real + 1j * imag
+    hdulist.close()
+    return ad

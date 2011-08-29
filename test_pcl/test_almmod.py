@@ -24,7 +24,7 @@ def shaperange_cplx(shape):
     return out.copy()
 
 lmax = 95
-nels = lmax * (lmax + 1) / 2 + lmax + 1
+nels = lmax * (lmax + 1) // 2 + lmax + 1
 alms = shaperange_cplx((nels,))
 
 def test_sanity():
@@ -205,4 +205,22 @@ def test_appendalms():
     alms = np.arange(nels)
     def func():
         ad.appendalms(alms)
+    yield assert_raises, TypeError, func
+
+def test_lm2ind():
+    lm2inddic = {(6, 4):25, (0, 0):0, (10, 0):55}
+    for key, value in lm2inddic.items():
+        yield ok_, almmod.lm2ind(key) == value
+        yield ok_, almmod.ind2lm(value) == key
+    def func():
+        a = almmod.ind2lm(3.0)
+    yield assert_raises, TypeError, func
+    def func():
+        a = almmod.lm2ind(3)
+    yield assert_raises, TypeError, func
+    def func():
+        a = almmod.lm2ind((3.0, 4))
+    yield assert_raises, TypeError, func
+    def func():
+        a = almmod.ind2lm((4, 3))
     yield assert_raises, TypeError, func

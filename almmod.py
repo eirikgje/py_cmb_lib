@@ -1,18 +1,24 @@
 from __future__ import division
 import numpy as np
 
-def ind2lm():
-    pass
-
-def lm2ind():
-    pass
+def ind2lm(i):
+    if not isinstance(i, int):
+        raise TypeError("index must be integer")
+    l = int((-1 + np.sqrt(1 + 8 * i)) // 2)
+    m = int(i - l * (l + 1) // 2)
+    return (l, m)
+    
+def lm2ind(lm):
+    if not all([isinstance(j, int) for j in lm]):
+        raise TypeError("l, m must be integers")
+    return lm[0] * (lm[0] + 1) // 2 + lm[1]
 
 class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, lsubd=None, rsubd=None,
                  pol=False):
         if mmax != None:
             raise NotImplementedError()
-        self.nnind = lmax * (lmax + 1) / 2 + lmax + 1
+        self.nnind = lmax * (lmax + 1) // 2 + lmax + 1
         self.dyn_ind = 0
         self._alms = None
         self.subd = ()
