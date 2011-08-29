@@ -23,7 +23,8 @@ class AlmData(object):
             self.subdivide(rsubd, left_of_dyn_d=False)
         if alms is None:
             alms = np.zeros(self.subd[0:self.dyn_ind] + (1,) + 
-                           self.subd[self.dyn_ind:] + (self.nnind,) + (2,))
+                           self.subd[self.dyn_ind:] + (self.nnind,),
+                           dtype = np.complex64)
         self.alms = alms
         self.lmax = lmax
         self.mmax = lmax
@@ -43,7 +44,7 @@ class AlmData(object):
         if not isinstance(lmax, int):
             raise TypeError("lmax must be an integer")
         else:
-            if np.size(self.alms, -2) != lmax * (lmax + 1) / 2 + lmax + 1:
+            if np.size(self.alms, -1) != lmax * (lmax + 1) / 2 + lmax + 1:
                 raise ValueError("""lmax must be compatible with last
                                     dimension of alm""")
             self._lmax = lmax
@@ -110,29 +111,27 @@ class AlmData(object):
             self._alms = np.resize(self.alms, self.subd[0:self.dyn_ind] +
                                   (self.alms.shape[old_dyn_ind],) +
                                   self.subd[self.dyn_ind:] +
-                                  (self.alms.shape[-2], self.alms.shape[-1]))
+                                  (self.alms.shape[-1],))
 
     def appendalms(self, alms):
         """Add one or several alms to object instance.
 
         The input alms(s) must be numpy arrays, or AlmData objects
         and they must have the shape
-        (subd, nalms, nels, 2) or (subd, nels, 2) where subd is the current
+        (subd, nalms, nels) or (subd, nels) where subd is the current
         subdivision of the AlmData instance, nels is the number
         of elements for l, m >= 0 (lmax * (lmax + 1) / 2 + lmax + 1) for the
         alms already added to the object instance. nalms can be any number, 
         and if this dimension is missing from the array, it will be interpreted 
         as alms for a single map. 
-        If there are no subdivisions, a (nels, 2) numpy array is acceptable.
+        If there are no subdivisions, a (nels) numpy array is acceptable.
 
         """
         if isinstance(alms, AlmData):
             if alms.lmax != self.lmax:
                 raise ValueError("Lmax is not compatible")
             alms = alms.alms
-        if np.size(alms, -1) != 2:
-            raise ValueError("Last dimension of alms must be 2")
-        if np.size(alms, -2) != np.size(self.alms, -2):
+        if alms.shape[-1] != self.alms.shape[-1]:
             raise ValueError("Incorrect number of elements in input alms")
         self.alms = np.append(self.alms, self.conform_alms(alms), 
                              axis=self.dyn_ind)
@@ -146,7 +145,7 @@ class AlmData(object):
         """
         if not isinstance(alms, np.ndarray):
             raise TypeError('Alms must be numpy array')
-        mlen = len(self.subd) + 3
+        mlen = len(self.subd) + 2
         if mlen > alms.ndim + 1:
             raise ValueError('Too few dimensions in alms')
         elif mlen < alms.ndim:
@@ -154,18 +153,18 @@ class AlmData(object):
         if mlen == alms.ndim:
             #Explicit dynamic dimension
             almsubd = (alms.shape[0:self.dyn_ind] + 
-                        alms.shape[self.dyn_ind + 1:-2])
+                        alms.shape[self.dyn_ind + 1:-1])
             if (almsubd != self.subd):
                 raise ValueError("""Alm dimensions do not conform to AlmData
                                 subdivision""")
         elif mlen == alms.ndim + 1:
             #Dynamic dimension is implicit
-            almsubd = (alms.shape[0:-2])
+            almsubd = (alms.shape[0:-1])
             if (almsubd  != self.subd):
                 raise ValueError("""Alm dimensions do not conform to AlmData
                                 subdivision""")
             else:
                 alms = alms.reshape(self.subd[0:self.dyn_ind] + (1,) + 
                                   self.subd[self.dyn_ind:] + 
-                                  alms.shape[-2:])
+                                  (alms.shape[-1],))
         return alms
