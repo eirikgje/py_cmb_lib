@@ -30,6 +30,7 @@ alms = shaperange_cplx((nels,))
 def test_sanity():
     ad = almmod.AlmData(lmax)
     yield ok_, ad.lmax == lmax
+    yield ok_, ad.alms.dtype == np.complex64
     ad = almmod.AlmData(lmax, alms=alms)
     yield ok_, np.all(ad.alms == alms)
     ad = almmod.AlmData(lmax, lsubd=(3, 2, 1))
@@ -200,3 +201,8 @@ def test_appendalms():
     def func():
         ad.appendalms(ad2)
     yield assert_raises, ValueError, func
+    ad = almmod.AlmData(lmax)
+    alms = np.arange(nels)
+    def func():
+        ad.appendalms(alms)
+    yield assert_raises, TypeError, func
