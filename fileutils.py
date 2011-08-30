@@ -74,3 +74,11 @@ def read_fits_alms(fname):
             ad.alms[0, i-1] = real + 1j * imag
     hdulist.close()
     return ad
+
+def write_fits_powspec(fname, powspec, bintab=False):
+    if bintab:
+        raise NotImplementedError()
+    else:
+        #Ascii table
+        if len(powspec) == 4:
+            #Assume T, E, B, TE

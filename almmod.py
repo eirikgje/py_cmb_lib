@@ -178,3 +178,7 @@ class AlmData(object):
                                   self.subd[self.dyn_ind:] + 
                                   (alms.shape[-1],))
         return alms
+
+class ClData(object):
+    def __init__(self, lmax, lmin=0):
+        self.lmax = lmax

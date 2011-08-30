@@ -224,3 +224,14 @@ def test_lm2ind():
     def func():
         a = almmod.ind2lm((4, 3))
     yield assert_raises, TypeError, func
+
+#Testing of cl-class
+#def test_sanitycl():
+#    cd = almmod.ClData(lmax)
+#    yield ok_, ad.lmax == lmax
+#    yield ok_, ad.alms.dtype == np.complex64
+#    ad = almmod.AlmData(lmax, alms=alms)
+#    yield ok_, np.all(ad.alms == alms)
+#    ad = almmod.AlmData(lmax, lsubd=(3, 2, 1))
+#    yield ok_, np.all((3, 2, 1) == ad.subd)
+
