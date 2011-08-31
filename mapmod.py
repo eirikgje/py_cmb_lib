@@ -286,11 +286,13 @@ class MapData(object):
     def setmap(self, map):
         if not isinstance(map, np.ndarray):
             raise TypeError("Map must be numpy array")
+        print self.pixaxis
+        print map.shape
         if map.shape[self.pixaxis] != 12*self.nside**2:
             #Try to autodetect pixel axis
-            for dim in map.shape:
-                if dim == 12*self.nside**2:
-                    self.pixaxis = dim
+            for i in range(map.ndim):
+                if map.shape[i] == 12*self.nside**2:
+                    self.pixaxis = i
                     break
             else:
                 raise ValueError("""Pixel number of input map does not conform 
@@ -369,8 +371,16 @@ class MapData(object):
                 if not found:
                     raise ValueError("""No axis given, and ambiguous where
                                         to append""")
-            #TODO: HERE
-            if along_axis == 
+            if len(self.map.shape) == 1:
+                if along_axis == 0:
+                    self.map = self.map.reshape((1, len(self.map)))
+                    map = map.reshape((1, len(map)))
+                elif along_axis == 1:
+                    self.map = self.map.reshape((len(self.map), 1))
+                    map = map.reshape((len(map), 1))
+            elif along_axis == len(self.map.shape):
+                self.map = self.map.reshape(self.map.shape + (1,))
+                map = map.reshape(map.shape + (1,))
 
         elif ndims == len(self.map.shape) + 1:
             if along_axis is None:
