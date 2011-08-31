@@ -369,3 +369,32 @@ def test_appendcls():
     def func():
         cd.appendcls(cd2)
     yield assert_raises, ValueError, func
+
+def test_speccls():
+    #Default: Should assume that we want all spectras
+    alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
+    telist = ['TT', 'TE', 'EE']
+    cd = almmod.ClData(lmax)
+    yield eq_, cd._nspecs, 6
+    yield eq_, cd.spectra, alllist
+    cd = almmod.ClData(lmax, spectra='all')
+    yield eq_, cd._nspecs, 6
+    yield eq_, cd.spectra, alllist
+    cd = almmod.ClData(lmax, spectra='T-E')
+    yield eq_, cd._nspecs, 3
+    yield eq_, cd.spectra, telist
+    #Once initialised, can only change the name of the spectra, not the number
+    try:
+        cd.spectra = ['TT', 'BB', 'EB']
+    except:
+        raise AssertionError()
+    yield eq_, cd.spectra, ['TT', 'BB', 'EB']
+    def func():
+        cd.spectra = ['TT', 'EB', 'BB', 'TE']
+    yield assert_raises, ValueError, func
+    def func():
+        cd.spectra = [3, 4, 1]
+    yield assert_raises, TypeError, func
+    def func():
+        cd.spectra = ['TT', 'skjera', 'BB']
+    yield assert_raises, ValueError, func

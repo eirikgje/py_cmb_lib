@@ -264,7 +264,7 @@ class MapData(object):
     at construction, subsequently it should be switched with switchordering().
     At this point, nside is uniquely determined by the last dimension of the
     map array, and all that is needed to initialize a map is an nside. This
-    will let the MapData.map array be an array of zeroes.
+    will make the MapData.map array be an array of zeroes.
 
     """
     def __init__(self, nside, ordering='ring', map=None, lsubd=None,
@@ -296,12 +296,11 @@ class MapData(object):
         return self._ordering
     
     def setordering(self, ordering):
-        if ordering is None:
-            self._ordering = ordering
-        else:
-            if ordering.lower() != 'ring' and ordering.lower() != 'nested':
-                raise ValueError("Ordering must be ring or nested")
-            self._ordering = ordering.lower()
+        if not isinstance(ordering, str):
+            raise TypeError("Ordering must be a string")
+        if ordering.lower() != 'ring' and ordering.lower() != 'nested':
+            raise ValueError("Ordering must be ring or nested")
+        self._ordering = ordering.lower()
 
     ordering = property(getordering, setordering)
 
@@ -312,7 +311,7 @@ class MapData(object):
         if not isinstance(nside, int):
             raise TypeError("nside must be an integer")
         else:
-            if np.size(self.map, -1) != 12*nside*nside:
+            if self.map.shape[-1] != 12*nside*nside:
                 raise ValueError("""nside must be compatible with last
                                     dimension of map""")
             self._nside = nside
@@ -338,12 +337,10 @@ class MapData(object):
 
     def switchordering(self):
         if self.ordering == 'ring':
-            if self.map is not None:
-                self.map = ring2nest(self.map, self.nside)
+            self.map = ring2nest(self.map, self.nside)
             self.ordering = 'nested'
         elif self.ordering == 'nested':
-            if self.map is not None:
-                self.map = nest2ring(self.map, self.nside)
+            self.map = nest2ring(self.map, self.nside)
             self.ordering='ring'
 
     def subdivide(self, vals, left_of_dyn_d=True):
@@ -409,7 +406,7 @@ class MapData(object):
             if map.nside != self.nside:
                 raise ValueError("Nside is not compatible")
             map = map.map
-        if np.size(map, -1) != np.size(self.map, -1):
+        if map.shape[-1] != self.map.shape[-1]:
             raise ValueError("Incorrect number of pixels in input map")
         map = self.conform_map(map)
         self.map = np.append(self.map, map, axis=self.dyn_ind)

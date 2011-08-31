@@ -50,7 +50,7 @@ class AlmData(object):
         if not isinstance(lmax, int):
             raise TypeError("lmax must be an integer")
         else:
-            if np.size(self.alms, -1) != lmax * (lmax + 1) / 2 + lmax + 1:
+            if self.alms.shape[-1] != lmax * (lmax + 1) / 2 + lmax + 1:
                 raise ValueError("""lmax must be compatible with last
                                     dimension of alm""")
             self._lmax = lmax
@@ -189,7 +189,7 @@ class ClData(object):
             self.subdivide(rsubd, left_of_dyn_d=False)
         if cls is None:
             cls = np.zeros(self.subd[0:self.dyn_ind] + (1,) + 
-                           self.subd[self.dyn_ind:] + (self.nspecs,) + 
+                           self.subd[self.dyn_ind:] + (self._nspecs,) + 
                            (lmax,))
         self.cls = cls
         self.lmax = lmax
@@ -209,7 +209,7 @@ class ClData(object):
         if not isinstance(lmax, int):
             raise TypeError("lmax must be an integer")
         else:
-            if np.size(self.cls, -1) != lmax:
+            if self.cls.shape[-1] != lmax:
                 raise ValueError("""lmax must be compatible with last
                                     dimension of cls""")
             self._lmax = lmax
@@ -222,9 +222,9 @@ class ClData(object):
     def setspectra(self, spectra):
         if isinstance(spectra, str):
             if spectra.lower() == 'all':
-                self._spectra = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
-            elif spectra.lower() == 'T-E':
-                self._spectra = ['TT', 'TE', 'EE']
+                spectra = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
+            elif spectra.lower() == 't-e':
+                spectra = ['TT', 'TE', 'EE']
             else:
                 raise TypeError("""Setting the spectra manually must be done
                                   using a list, or one of the predefined
@@ -237,9 +237,15 @@ class ClData(object):
                                       be strings""")
                 if not spectrum in approved:
                     raise ValueError("Spectrum must have valid value")
-            self._spectra = spectra
 
-        self.nspecs = len(self._spectra)
+        nspecs = len(spectra)
+        #cls will only be None during construction
+        if self.cls is not None:
+            if nspecs != self.cls.shape[-2]:
+                raise ValueError("""Number of spectra must conform to the
+                                    next-to-last dimension of the cls""")
+        self._spectra = spectra
+        self._nspecs = nspecs
 
     spectra = property(getspectra, setspectra)
 
@@ -286,7 +292,7 @@ class ClData(object):
         if self.cls is not None:
             self._cls = np.resize(self.cls, self.subd[0:self.dyn_ind] +
                                   (self.cls.shape[old_dyn_ind],) +
-                                  self.subd[self.dyn_ind:] + (self.nspecs,) + 
+                                  self.subd[self.dyn_ind:] + (self._nspecs,) + 
                                   (self.cls.shape[-1],))
 
     def appendcls(self, cls):
@@ -306,7 +312,7 @@ class ClData(object):
         if isinstance(cls, ClData):
             if cls.lmax != self.lmax:
                 raise ValueError("Lmax is not compatible")
-            if cls.nspecs != self.nspecs:
+            if cls._nspecs != self._nspecs:
                 raise ValueError("Number of spectra are different")
             if cls.spectra != self.spectra:
                 raise ValueError("Spectra are different")
@@ -343,6 +349,6 @@ class ClData(object):
                                 subdivision""")
             else:
                 cls = cls.reshape(self.subd[0:self.dyn_ind] + (1,) + 
-                                  self.subd[self.dyn_ind:] + (self.nspecs,) + 
+                                  self.subd[self.dyn_ind:] + (self._nspecs,) + 
                                   (cls.shape[-1],))
         return cls
