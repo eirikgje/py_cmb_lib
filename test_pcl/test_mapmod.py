@@ -8,6 +8,14 @@ nside = 32
 npix = 12*nside**2
 map = np.arange(npix)
 
+def shaperange(shape, dtype=float):
+    m = 1
+    for s in shape:
+        m = m * s
+    srange = np.arange(m, dtype=dtype)
+    srange = srange.reshape(shape)
+    return srange.copy()
+
 def test_ordering_conversion():
     r2npixs = {0:15, 44:95, 112:99, 55:52}
     n2rpixs = {0:74, 106:94, 66:135, 176:191}
@@ -17,14 +25,14 @@ def test_ordering_conversion():
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
     md.switchordering()
     for key, value in r2npixs.items():
-        yield eq_, md.map[0, key], value
+        yield eq_, md.map[key], value
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
     md.switchordering()
     for key, value in n2rpixs.items():
-        yield eq_, md.map[0, key], value
+        yield eq_, md.map[key], value
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
@@ -34,14 +42,14 @@ def test_ordering_conversion():
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
     md.switchordering()
     for key, value in n2rpixs.items():
-        yield eq_, md.map[0, key], value
+        yield eq_, md.map[key], value
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
     md.switchordering()
     for key, value in r2npixs.items():
-        yield eq_, md.map[0, key], value
+        yield eq_, md.map[key], value
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
@@ -63,10 +71,12 @@ def test_ordering_conversion():
     yield ok_, np.all(map == md.map)
 
     #Test for other shapes
-    md = mapmod.MapData(nside, lsubd=(3, 4))
+    map = shaperange((3, 4, npix))
+    md = mapmod.MapData(nside, map=map)
     md.switchordering()
     md.switchordering()
-    yield eq_, md.map.shape, (3, 4, 1, npix)
+    yield eq_, md.map.shape, (3, 4, npix)
+    yield ok_, np.all(map == md.map)
 
     #Test the pixel versions as well
     nside = 4
@@ -85,8 +95,6 @@ def test_sanity():
     yield ok_, md.ordering == 'nested'
     md = mapmod.MapData(nside, map=map)
     yield ok_, np.all(md.map == map)
-    md = mapmod.MapData(nside, lsubd=(3, 2, 1))
-    yield ok_, np.all((3, 2, 1) == md.subd)
 
 def test_init():
     def func():
@@ -104,15 +112,11 @@ def test_init():
     yield assert_raises, TypeError, func
     #Given no map, should initialize a map of zeros with given nside
     md = mapmod.MapData(nside=nside)
-    yield ok_, np.all(md.map == np.zeros((1, npix)))
-    md = mapmod.MapData(nside, lsubd=(3, 4))
-    yield eq_, (3, 4, 1, npix), md.map.shape
-    md = mapmod.MapData(nside, rsubd=(2, 5))
-    yield eq_, (1, 2, 5, npix), md.map.shape
-    md = mapmod.MapData(nside, lsubd=6, rsubd=(2, 5))
-    yield eq_, (6, 1, 2, 5, npix), md.map.shape
-    md = mapmod.MapData(nside, lsubd=(6, 3), rsubd=2)
-    yield eq_, (6, 3, 1, 2, npix), md.map.shape
+    yield ok_, np.all(md.map == np.zeros(npix))
+    md = mapmod.MapData(nside, map=np.zeros(3, npix, 4))
+    yield eq_, (3, npix, 4), md.map.shape
+    md = mapmod.MapData(nside, map=np.zeros(3, 7, npix))
+    yield eq_, (3, 7, npix), md.map.shape
 
 def test_assign():
     md = mapmod.MapData(nside)
@@ -129,22 +133,19 @@ def test_assign():
     def func():
         md.ordering = 'neste'
     yield assert_raises, ValueError, func
-    #After subdividing, should be possible to assign a map of the given size
+    #Should be able to assign whichever map as long as nside is correct
     md = mapmod.MapData(nside)
-    md.subdivide(3)
     map = np.zeros((3, npix))
     try:
         md.map = map
     except:
         raise AssertionError()
-    md = mapmod.MapData(nside)
-    md.subdivide((3, 4), left_of_dyn_d=False)
-    map = np.zeros((3, 4, npix))
+    map = np.zeros((3, npix, 4))
     try:
         md.map = map
     except:
         raise AssertionError()
-    map = np.zeros((1, 3, 4, npix))
+    map = np.zeros((1, 3, npix, 4, 5))
     try:
         md.map = map
     except:
@@ -152,57 +153,24 @@ def test_assign():
 
 def test_shape():
     md = mapmod.MapData(nside)
-    yield eq_, (1, npix), md.map.shape
-    md.subdivide(5)
-    yield eq_, (5, 1, npix), md.map.shape
-    map = np.arange(npix)
-    def func():
-        md.map = map
-    yield assert_raises, ValueError, func
-    map.resize((2, 3, 4,npix))
-    def func():
-        md.map = map
-    yield assert_raises, ValueError, func
-    md = mapmod.MapData(nside, lsubd=(3, 2))
-    yield eq_, (3, 2, 1, npix), md.map.shape
-    #Should be possible to choose whether the subdivision should be to the
-    #left or right of the dynamical dimension
-    md = mapmod.MapData(nside)
-    md.subdivide(3, left_of_dyn_d=False)
-    yield eq_, (1, 3, npix), md.map.shape
-    md = mapmod.MapData(nside)
-    md.subdivide((3, 5), left_of_dyn_d=False)
-    yield eq_, (1, 3, 5, npix), md.map.shape
-    md = mapmod.MapData(nside)
-    md.subdivide((3, 5))
-    yield eq_, (3, 5, 1, npix), md.map.shape
-    md = mapmod.MapData(nside)
-    md.subdivide((3, 5), left_of_dyn_d=False)
-    md.subdivide(4)
-    yield eq_, (4, 1, 3, 5, npix), md.map.shape
+    yield eq_, (npix,), md.map.shape
+    map = np.zeros((4, npix, 5, 6))
+    yield eq_, (4, npix, 5, 6), md.map.shape
+    yield eq_, 1, md.pixaxis
 
 def test_pol():
     #Testing the polarization feature
-    md = mapmod.MapData(nside, pol=True)
-    yield eq_, (1, 3, npix), md.map.shape
-    map = np.reshape(np.arange(3*npix), (1, 3, npix))
-    md.map = map
-    yield ok_, np.all(map == md.map)
-    md = mapmod.MapData(nside)
-    md.pol = True
-    yield eq_, (1, 3, npix), md.map.shape
-    #'pol' keyword is only supposed to be a 'compatibility flag' - i.e., if 
-    #the MapData object already is compatible, then do nothing
-    map = np.reshape(np.arange(3*npix), (1, 3, npix))
-    md = mapmod.MapData(nside, rsubd=3, map=map)
-    map1 = md.map
-    md.pol = True
-    yield ok_, np.all(map1 == md.map)
-    #Other way around:
-    md = mapmod.MapData(nside, pol=True)
-    map = md.map
-    md.pol = False
-    yield ok_, np.all(map == md.map)
+    def func():
+        md = mapmod.MapData(nside, polaxis=0)
+    yield assert_raises, ValueError, func
+    map=np.zeros((3, npix))
+    def func():
+        md = mapmod.MapData(nside, map=map, polaxis=1)
+    yield assert_raises, ValueError, func
+    try:
+        md = mapmod.MapData(nside, map=map, polaxis=0)
+    except:
+        raise AssertionError()
 
 def test_degrade():
     nside = 4
@@ -218,11 +186,12 @@ def test_degrade():
     md = mapmod.MapData(nside, map=map, ordering='nested')
     md = mapmod.degrade(md, nside_n=2)
     yield ok_, np.all(nmap == md.map)
-    md = mapmod.MapData(nside, map=map, ordering='nested')
-    md.subdivide((5, 6))
-    nmap = np.resize(nmap, (5, 6, 1, 12*2*2))
-    md = mapmod.degrade(md, nside_n=2)
-    yield ok_, np.all(nmap == md.map)
+    map = np.zeros((3, npix, 5))
+    md = mapmod.MapData(nside, map=map)
+    try:
+        md = mapmod.degrade(md, nside_n=2)
+    except:
+        raise AssertionError()
 
 def test_appendmaps():
     md = mapmod.MapData(nside)

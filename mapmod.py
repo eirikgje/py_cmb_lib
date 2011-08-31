@@ -264,31 +264,38 @@ class MapData(object):
     at construction, subsequently it should be switched with switchordering().
     At this point, nside is uniquely determined by the last dimension of the
     map array, and all that is needed to initialize a map is an nside. This
-    will make the MapData.map array be an array of zeroes.
+    will make the MapData.map array be an array of zeroes. nside (and npix)
+    for a map will be practically immutable after construction.
 
     """
-    def __init__(self, nside, ordering='ring', map=None, lsubd=None,
-                 rsubd=None, pol=False):
-        self.dyn_ind = 0
-        self._map = None
-        self.subd = ()
-        self.pol = pol
-        if lsubd is not None:
-            self.subdivide(lsubd)
-        if rsubd is not None:
-            self.subdivide(rsubd, left_of_dyn_d=False)
+    def __init__(self, nside, ordering='ring', map=None, pixaxis=0,
+                 rsubd=None, polaxis=None):
+        self.pixaxis = pixaxis
         if map is None:
-            map = np.zeros(self.subd[0:self.dyn_ind] + (1,) + 
-                           self.subd[self.dyn_ind:] + (12*nside**2,))
-        self.map = map
+            if not isinstance(nside, int):
+                raise TypeError("nside must be an integer")
+            map = np.zeros(12*nside**2)
         self.nside = nside
+        self.map = map
         self.ordering = ordering
+        self.polaxis = polaxis
 
     def getmap(self):
         return self._map
 
     def setmap(self, map):
-        self._map = self.conform_map(map)
+        if not isinstance(map, np.ndarray):
+            raise TypeError("Map must be numpy array")
+        if map.shape[self.pixaxis] != 12*self.nside**2:
+            #Try to autodetect pixel axis
+            for dim in map.shape:
+                if dim == 12*self.nside**2:
+                    self.pixaxis = dim
+                    break
+            else:
+                raise ValueError("""Pixel number of input map does not conform 
+                                    to nside""")
+        self._map = map
 
     map = property(getmap, setmap)
 
@@ -310,30 +317,21 @@ class MapData(object):
     def setnside(self, nside):
         if not isinstance(nside, int):
             raise TypeError("nside must be an integer")
-        else:
-            if self.map.shape[-1] != 12*nside*nside:
-                raise ValueError("""nside must be compatible with last
-                                    dimension of map""")
-            self._nside = nside
+        b = bin(nside)[2:]
+        if (b[0] != '1' or int(b[1:], 2) != 0):
+            raise ValueError('nside has invalid value')
+        self._nside = nside
 
     nside = property(getnside, setnside)
 
-    def getpol(self):
-        return self._pol
+    def getpolaxis(self):
+        return self._polaxis
 
-    def setpol(self, pol):
-        if not isinstance(pol, bool):
-            raise TypeError("pol must be a boolean variable")
-        if pol:
-            if len(self.subd) > 0:
-                if not self.subd[-1] == 3:
-                    self.subdivide(3, left_of_dyn_d=False)
-            else:
-                self.subdivide(3, left_of_dyn_d=False)
-        self._pol = pol
-
-    pol = property(getpol, setpol)
-
+    def setpolaxis(self, polaxis):
+        if polaxis is not None:
+            if self.map.shape[polaxis] != 3:
+                raise ValueError("Polarization axis does not have 3 dimensions")
+        self._polaxis = polaxis
 
     def switchordering(self):
         if self.ordering == 'ring':
@@ -343,105 +341,80 @@ class MapData(object):
             self.map = nest2ring(self.map, self.nside)
             self.ordering='ring'
 
-    def subdivide(self, vals, left_of_dyn_d=True):
-        """Can take either int, tuple or numpy arrays as arguments.
-        
-        By default, subdividing will be done in such a way that the dynamical
-        index (i.e. number of map samples or whatever) is the next-to-last one
-        (the last one being the number of map pixels). Note that adding samples
-        should have nothing to do with subdividing - subdividing is for those
-        cases where each sample will have more than one map (polarization, 
-        various frequencies etc.) Note, however, that for polarization it is
-        possible to just set the 'pol' keyword to True for the object, and the 
-        subdivision will be taken care of. Also note that after subdividing, 
-        each map array added (or assigned) to the MapData instance must have the
-        shape (x1, x2, ..., xn, n, npix) or (x1, x2, ..., xn, npix) where
-        x1, x2, ..., xn are the subdivisions and n is the number of map samples
-        added (could be 1 and will be interpreted as 1 if missing). 
-        Subdivision can be done several times. The new dimension will then
-        be the leftmost dimension in the resulting MapData.map array.
-
-        """
-        old_dyn_ind = self.dyn_ind
-        if isinstance(vals, int):
-            if left_of_dyn_d:
-                self.dyn_ind += 1
-        elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
-            if left_of_dyn_d:
-                self.dyn_ind += len(vals)
-        else:
-            raise TypeError('Must be int, tuple or np.ndarray')
-
-        if left_of_dyn_d:
-            if isinstance(vals, int):
-                self.subd = (vals,) + self.subd
-            else:
-                self.subd = tuple(vals) + self.subd
-        else:
-            if isinstance(vals, int):
-                self.subd = self.subd + (vals,)
-            else:
-                self.subd = self.subd + tuple(vals)
-
-        if self.map is not None:
-            self._map = np.resize(self.map, self.subd[0:self.dyn_ind] +
-                                  (self.map.shape[old_dyn_ind],) +
-                                  self.subd[self.dyn_ind:] +
-                                  (self.map.shape[-1],))
-
-    def appendmaps(self, map):
+    def appendmaps(self, map, along_axis=None):
         """Add one or several maps to object instance.
 
-        The input map(s) must be numpy arrays, or MapData objects
-        and they must have the shape
-        (subd, nmaps, npix) or (subd, npix) where subd is the current
-        subdivision of the MapData instance, npix is the number of pixels of the
-        maps already added to the object instance. nmaps can be any number, 
-        and if this dimension is missing from the array, it will be interpreted 
-        as a single map. If there are no subdivisions, a (npix) numpy array is
-        acceptable.
-
+        The maps must be numpy arrays or MapData objects, and they must
+        conform to all dimensions of the existing map but one.
         """
+
         if isinstance(map, MapData):
             if map.nside != self.nside:
                 raise ValueError("Nside is not compatible")
             map = map.map
-        if map.shape[-1] != self.map.shape[-1]:
-            raise ValueError("Incorrect number of pixels in input map")
-        map = self.conform_map(map)
-        self.map = np.append(self.map, map, axis=self.dyn_ind)
+        ndims = len(map.shape)
+        found = False
+        if ndims == len(self.map.shape):
+            if along_axis is None:
+                for i in range(ndims):
+                    if i != self.polaxis and i != self.pixaxis:
+                        if map.shape[i] != self.map.shape[i]:
+                            if not found:
+                                along_axis = i
+                                found = True
+                            else:
+                                raise ValueError("""More than one axis differs 
+                                                    in the existing and 
+                                                    appended map""")
+                if not found:
+                    raise ValueError("""No axis given, and ambiguous where
+                                        to append""")
+            #TODO: HERE
+            if along_axis == 
 
-    def conform_map(self, map):
-        """Make input map acceptable shape, or raise exception.
-        
-        Input map is only compared to the current subdivision, not any present
-        maps.
-        
-        """
-        if not isinstance(map, np.ndarray):
-            raise TypeError('Map must be numpy array')
-        mlen = len(self.subd) + 2
-        if mlen > map.ndim + 1:
-            raise ValueError('Too few dimensions in map')
-        elif mlen < map.ndim:
-            raise ValueError('Too many dimensions in map')
-        if mlen == map.ndim:
-            #Explicit dynamic dimension
-            mapsubd = (map.shape[0:self.dyn_ind] + 
-                        map.shape[self.dyn_ind + 1:-1])
-            if (mapsubd != self.subd):
-                print mapsubd
-                print self.subd
-                raise ValueError("""Map dimensions do not conform to MapData
-                                subdivision""")
-        elif mlen == map.ndim + 1:
-            #Dynamic dimension is implicit
-            mapsubd = (map.shape[0:-1])
-            if (mapsubd  != self.subd):
-                raise ValueError("""Map dimensions do not conform to MapData
-                                subdivision""")
-            else:
-                map = map.reshape(self.subd[0:self.dyn_ind] + (1,) + 
-                                  self.subd[self.dyn_ind:] + 
-                                  (map.shape[-1],))
-        return map
+        elif ndims == len(self.map.shape) + 1:
+            if along_axis is None:
+                smallind = 0
+                for i in range(ndims):
+                    if i != self.polaxis and i != self.pixaxis:
+                        if map.shape[i] != self.map.shape[smallind]:
+                            if not found:
+                                along_axis = i
+                                found = True
+                            else:
+                                raise ValueError("""More than one axis differs 
+                                                    in the existing and 
+                                                    appended map""")
+                        else:
+                            smallind += 1
+                if not found:
+                    raise ValueError("""No axis given, and ambiguous where
+                                        to append""")
+            self.map = self.map.reshape(self.map.shape[0:along_axis] + (1,) + 
+                                        self.map.shape[along_axis:])
+        elif ndims == len(self.map.shape) - 1:
+            if along_axis is None:
+                smallind = 0
+                for i in range(ndims):
+                    if i != self.polaxis and i != self.pixaxis:
+                        if map.shape[smallind] != self.map.shape[i]:
+                            if not found:
+                                along_axis = i
+                                found = True
+                            else:
+                                raise ValueError("""More than one axis differs 
+                                                    in the existing and 
+                                                    appended map""")
+                        else:
+                            smallind += 1
+                if not found:
+                    raise ValueError("""No axis given, and ambiguous where
+                                        to append""")
+            map = map.reshape(map.shape[0:along_axis] + (1,) +
+                              map.shape[along_axis:])
+        else:
+            raise ValueError("Map has wrong number of dimensions")
+
+        print map.shape
+        print along_axis
+        self.map = np.append(self.map, map, axis=along_axis)
