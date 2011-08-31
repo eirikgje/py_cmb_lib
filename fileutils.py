@@ -75,10 +75,10 @@ def read_fits_alms(fname):
     hdulist.close()
     return ad
 
-def write_fits_powspec(fname, powspec, bintab=False):
-    if bintab:
-        raise NotImplementedError()
-    else:
-        #Ascii table
-        if len(powspec) == 4:
-            #Assume T, E, B, TE
+#def write_fits_powspec(fname, powspec, bintab=False):
+#    if bintab:
+#        raise NotImplementedError()
+#    else:
+#        #Ascii table
+#        if len(powspec) == 4:
+#            #Assume T, E, B, TE

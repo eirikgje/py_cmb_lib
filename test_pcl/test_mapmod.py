@@ -133,9 +133,10 @@ def test_assign():
     md = mapmod.MapData(nside)
     md.subdivide(3)
     map = np.zeros((3, npix))
-    def func():
+    try:
         md.map = map
-
+    except:
+        raise AssertionError()
     md = mapmod.MapData(nside)
     md.subdivide((3, 4), left_of_dyn_d=False)
     map = np.zeros((3, 4, npix))
