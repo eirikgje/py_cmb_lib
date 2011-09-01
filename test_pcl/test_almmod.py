@@ -220,35 +220,49 @@ def test_appendcls():
     yield eq_, (3, 4, lmax, 3, 2), cd.cls.shape
 
 def test_speccls():
-    #Default: Should assume we only want temperature
     alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
     telist = ['TT', 'TE', 'EE']
     templist = ['TT']
+    #Default: Should assume we only want temperature
     cd = almmod.ClData(lmax)
     yield eq_, cd.nspecs, 1
     yield eq_, cd.spectra, templist
     yield eq_, cd.specaxis, None
-    #cd = almmod.ClData(lmax)
-    #yield eq_, cd.nspecs, 6
-    #yield eq_, cd.spectra, alllist
-    #cd = almmod.ClData(lmax, spectra='all')
-    #yield eq_, cd.nspecs, 6
-    #yield eq_, cd.spectra, alllist
-    #cd = almmod.ClData(lmax, spectra='T-E')
-    #yield eq_, cd.nspecs, 3
-    #yield eq_, cd.spectra, telist
-    ##Once initialised, can only change the name of the spectra, not the number
-    #try:
-    #    cd.spectra = ['TT', 'BB', 'EB']
-    #except:
-    #    raise AssertionError()
-    #yield eq_, cd.spectra, ['TT', 'BB', 'EB']
-    #def func():
-    #    cd.spectra = ['TT', 'EB', 'BB', 'TE']
-    #yield assert_raises, ValueError, func
-    #def func():
-    #    cd.spectra = [3, 4, 1]
-    #yield assert_raises, TypeError, func
-    #def func():
-    #    cd.spectra = ['TT', 'skjera', 'BB']
-    #yield assert_raises, ValueError, func
+    cd = almmod.ClData(lmax, spectra='all')
+    yield eq_, cd.nspecs, 6
+    yield eq_, cd.spectra, alllist
+    yield eq_, cd.specaxis, None
+    cd = almmod.ClData(lmax, spectra='T-E')
+    yield eq_, cd.nspecs, 3
+    yield eq_, cd.spectra, telist
+    yield eq_, cd.specaxis, None
+    try:
+        cd = almmod.ClData(lmax, spectra=['TT', 'BB', 'EB'])
+    except:
+        raise AssertionError
+    #When setting specaxis, the cl dimension must agree
+    cls = shaperange((lmax,))
+    cd = almmod.ClData(lmax, spectra='temp')
+    def func():
+        cd.specaxis = 0
+    yield assert_raises, ValueError, func
+    cd = almmod.ClData(lmax, spectra='temp')
+    cd.cls = shaperange((1, lmax))
+    try:
+        cd.specaxis = 0
+    except:
+        raise AssertionError
+    #Should be possible to change the cls later - i.e. specaxis should not be
+    #imposing anything
+    try:
+        cd.cls = shaperange((4, 5, lmax)) 
+    except:
+        raise AssertionError
+    def func():
+        cd.specaxis = 1
+    yield assert_raises, ValueError, func
+    cd.spectra = ['TT', 'TE', 'EE', 'EB', 'BB']
+    try:
+        cd.specaxis = 1
+    except:
+        raise AssertionError
