@@ -354,7 +354,7 @@ class MapData(object):
 
     def getpolaxis(self):
         if self._polaxis is not None:
-            if self.cls.shape[self._polaxis] != 3:
+            if self.map.shape[self._polaxis] != 3:
                 raise ValueError("""Polarization axis has not been updated since
                                     changing number of map dimensions""")
         return self._polaxis

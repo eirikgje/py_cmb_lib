@@ -11,12 +11,19 @@ def read_fits_map(fname):
     data = hdulist[1].data
     cols = hdulist[1].columns
     hdr = hdulist[1].header
-    #subd = np.array(len(cols.names))
     nside = hdr['nside']
     npix = 12*nside*nside
-    md = mapmod.MapData(nside, ordering=hdr['ordering'], pol=hdr['polar'])
-    for i in range(md.map.shape[1]):
-        md.map[0, i] = data.field(i).flatten()
+    if hdr['polar']:
+        shape = (3, npix)
+    else:
+        shape = (npix,)
+    md = mapmod.MapData(nside, ordering=hdr['ordering'], map=np.zeros(shape))
+    if hdr['polar']:
+        for i in range(3):
+            md.map[i, :] = data.field(i).flatten()
+        md.polaxis = 0
+    else:
+        md.map = data.field(i).flatten()
     hdulist.close()
     return md
 
