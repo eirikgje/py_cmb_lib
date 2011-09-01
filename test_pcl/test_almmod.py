@@ -26,7 +26,7 @@ def shaperange_cplx(shape):
 lmax = 95
 nels = lmax * (lmax + 1) // 2 + lmax + 1
 alms = shaperange_cplx((nels,))
-cls = shaperange((lmax,), dtype=float)
+cls = shaperange((lmax + 1,), dtype=float)
 
 def test_sanity():
     alms = shaperange_cplx((nels,))
@@ -147,17 +147,17 @@ def test_lm2ind():
 
 #Testing of cl-class
 def test_sanitycl():
-    cls = shaperange((lmax,), dtype=float)
+    cls = shaperange((lmax + 1,), dtype=float)
     cd = almmod.ClData(lmax)
     yield ok_, cd.lmax == lmax
     cd = almmod.ClData(lmax, cls=cls)
     yield ok_, np.all(cd.cls == cls)
-    cls = shaperange_cplx((4, lmax, 8))
+    cls = shaperange_cplx((4, lmax + 1, 8))
     ad = almmod.ClData(lmax, cls=cls)
-    yield eq_, ad.cls.shape, (4, lmax, 8)
+    yield eq_, ad.cls.shape, (4, lmax + 1, 8)
 
 def test_initcl():
-    cls = np.arange(lmax)
+    cls = np.arange(lmax + 1)
     def func():
         cd = almmod.ClData(lmax=95.0)
     yield assert_raises, TypeError, func
@@ -169,9 +169,9 @@ def test_initcl():
         cd = almmod.ClData(lmax, cls=4)
     yield assert_raises, TypeError, func
     #Given no cls, should initialize cls of zeros with given lmax
-    cd = almmod.ClData(lmax=lmax)
-    yield ok_, np.all(cd.cls == np.zeros(lmax))
-    yield eq_, cd.cls.shape, (lmax,)
+    cd = almmod.ClData(lmax)
+    yield ok_, np.all(cd.cls == np.zeros(lmax + 1))
+    yield eq_, cd.cls.shape, (lmax + 1,)
 
 def test_assigncl():
     cd = almmod.ClData(lmax)
@@ -184,40 +184,40 @@ def test_assigncl():
     yield assert_raises, ValueError, func
 
 def test_shapecl():
-    cls = shaperange((lmax,), dtype=float)
+    cls = shaperange((lmax + 1,), dtype=float)
     cd = almmod.ClData(lmax)
-    yield eq_, (lmax,), cd.cls.shape
-    cls = np.resize(cls, (2, 3, 4, lmax))
+    yield eq_, (lmax + 1,), cd.cls.shape
+    cls = np.resize(cls, (2, 3, 4, lmax + 1))
     cd.cls = cls
-    yield eq_, (2, 3, 4, lmax), cd.cls.shape
-    cls = np.resize(cls, (3, lmax, 5))
+    yield eq_, (2, 3, 4, lmax + 1), cd.cls.shape
+    cls = np.resize(cls, (3, lmax + 1, 5))
     cd.cls = cls
-    yield eq_, (3, lmax, 5), cd.cls.shape
+    yield eq_, (3, lmax + 1, 5), cd.cls.shape
 
 def test_appendcls():
     cd = almmod.ClData(lmax)
-    cls = shaperange((1, lmax))
+    cls = shaperange((1, lmax + 1))
     cd.appendcls(cls, along_axis=0)
-    combcls = np.append(np.zeros((1, lmax)), cls, axis=0)
+    combcls = np.append(np.zeros((1, lmax + 1)), cls, axis=0)
     yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (2, lmax), cd.cls.shape
+    yield eq_, (2, lmax + 1), cd.cls.shape
     cd = almmod.ClData(lmax, cls=cls)
     cd.appendcls(cls, along_axis=0)
     combcls = np.append(cls, cls, axis=0)
     yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (2, lmax), cd.cls.shape
+    yield eq_, (2, lmax + 1), cd.cls.shape
     #Default axis should be 0:
     cd = almmod.ClData(lmax, cls=cls)
     cd.appendcls(cls)
     yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (2, lmax), cd.cls.shape
-    cls = shaperange((3, 4, lmax, 3, 1))
+    yield eq_, (2, lmax + 1), cd.cls.shape
+    cls = shaperange((3, 4, lmax + 1, 3, 1))
     cd = almmod.ClData(lmax, cls=cls)
     def func():
         cd.appendcls(cls, along_axis=2)
     yield assert_raises, ValueError, func
     cd.appendcls(cls, along_axis=4)
-    yield eq_, (3, 4, lmax, 3, 2), cd.cls.shape
+    yield eq_, (3, 4, lmax + 1, 3, 2), cd.cls.shape
 
 def test_speccls():
     alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
@@ -241,13 +241,13 @@ def test_speccls():
     except:
         raise AssertionError
     #When setting specaxis, the cl dimension must agree
-    cls = shaperange((lmax,))
+    cls = shaperange((lmax + 1,))
     cd = almmod.ClData(lmax, spectra='temp')
     def func():
         cd.specaxis = 0
     yield assert_raises, ValueError, func
     cd = almmod.ClData(lmax, spectra='temp')
-    cd.cls = shaperange((1, lmax))
+    cd.cls = shaperange((1, lmax + 1))
     try:
         cd.specaxis = 0
     except:
@@ -255,7 +255,7 @@ def test_speccls():
     #Should be possible to change the cls later - i.e. specaxis should not be
     #imposing anything
     try:
-        cd.cls = shaperange((4, 5, lmax)) 
+        cd.cls = shaperange((4, 5, lmax + 1)) 
     except:
         raise AssertionError
     def func():

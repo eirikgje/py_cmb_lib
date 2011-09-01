@@ -121,7 +121,7 @@ class ClData(object):
     def __init__(self, lmax, cls=None, spectra='temp', specaxis=None, 
                  claxis=None):
         if cls is not None and claxis is not None:
-            if cls.shape[claxis] != lmax:
+            if cls.shape[claxis] != lmax + 1:
                 raise ValueError("""Explicit claxis does not contain the right
                                     number of elements""")
         if claxis is None:
@@ -129,7 +129,7 @@ class ClData(object):
         self.claxis = claxis
         self.spectra = spectra
         if cls is None:
-            cls = np.zeros(lmax)
+            cls = np.zeros(lmax + 1)
         self._lmax = None
         self.lmax = lmax
         self.cls = cls
@@ -141,10 +141,10 @@ class ClData(object):
     def setcls(self, cls):
         if not isinstance(cls, np.ndarray):
             raise TypeError("Cls must be numpy array")
-        if self.claxis >= cls.ndim or cls.shape[self.claxis] != self.lmax:
+        if self.claxis >= cls.ndim or cls.shape[self.claxis] != self.lmax + 1:
             #Try to autodetect cl-axis
             for i in range(cls.ndim):
-                if cls.shape[i] == self.lmax:
+                if cls.shape[i] == self.lmax + 1:
                     self.claxis = i
                     break
             else:
