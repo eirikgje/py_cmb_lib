@@ -113,9 +113,9 @@ def test_init():
     #Given no map, should initialize a map of zeros with given nside
     md = mapmod.MapData(nside=nside)
     yield ok_, np.all(md.map == np.zeros(npix))
-    md = mapmod.MapData(nside, map=np.zeros(3, npix, 4))
+    md = mapmod.MapData(nside, map=np.zeros((3, npix, 4)))
     yield eq_, (3, npix, 4), md.map.shape
-    md = mapmod.MapData(nside, map=np.zeros(3, 7, npix))
+    md = mapmod.MapData(nside, map=np.zeros((3, 7, npix)))
     yield eq_, (3, 7, npix), md.map.shape
 
 def test_assign():
@@ -154,7 +154,7 @@ def test_assign():
 def test_shape():
     md = mapmod.MapData(nside)
     yield eq_, (npix,), md.map.shape
-    map = np.zeros((4, npix, 5, 6))
+    md.map = np.zeros((4, npix, 5, 6))
     yield eq_, (4, npix, 5, 6), md.map.shape
     yield eq_, 1, md.pixaxis
 
@@ -192,55 +192,36 @@ def test_degrade():
         md = mapmod.degrade(md, nside_n=2)
     except:
         raise AssertionError()
+    map = shaperange((npix, 1))
+    nmap = nmap.reshape((12*2*2, 1))
+    for i in range(3):
+        map = np.append(map, map, axis=1)
+        nmap = np.append(nmap, nmap, axis=1)
+    md = mapmod.MapData(nside, map=map, ordering='nested')
+    md = mapmod.degrade(md, nside_n=2)
+    yield ok_, np.all(nmap == md.map)
 
 def test_appendmaps():
     md = mapmod.MapData(nside)
-    map = np.arange(npix)
-    md.appendmaps(map)
-    combmap = np.append(np.zeros(npix), map)
-    combmap = np.reshape(combmap, (2, npix))
+    map = shaperange((1, npix))
+    md.appendmaps(map, along_axis=0)
+    combmap = np.append(np.zeros((1, npix)), map, axis=0)
     yield ok_, np.all(combmap == md.map)
     yield eq_, (2, npix), md.map.shape
-    md = mapmod.MapData(nside)
-    map = np.arange(npix)
-    map = np.reshape(map, (1, npix))
-    md.appendmaps(map)
-    combmap = np.append(np.zeros(npix), map)
-    combmap = np.reshape(combmap, (2, npix))
+    md = mapmod.MapData(nside, map=map)
+    md.appendmaps(map, along_axis=0)
+    combmap = np.append(map, map, axis=0)
     yield ok_, np.all(combmap == md.map)
     yield eq_, (2, npix), md.map.shape
-    md = mapmod.MapData(nside, lsubd=(3, 2))
-    map = np.arange(3*2*npix)
-    map = map.reshape((3, 2, npix))
+    #Default axis should be 0:
+    md = mapmod.MapData(nside, map=map)
     md.appendmaps(map)
-    map = map.reshape((3, 2, 1, npix))
-    combmap = np.append(np.zeros((3, 2, 1, npix)), map, axis=2)
     yield ok_, np.all(combmap == md.map)
-    yield eq_, (3, 2, 2, npix), md.map.shape
-    md = mapmod.MapData(nside, rsubd=8)
-    map = np.arange(8*npix)
-    map = map.reshape((8, npix))
-    md.appendmaps(map)
-    map = map.reshape((1, 8, npix))
-    combmap = np.append(np.zeros((1, 8, npix)), map, axis=0)
-    yield ok_, np.all(combmap == md.map)
-    yield eq_, (2, 8, npix), md.map.shape
-    md = mapmod.MapData(nside, lsubd=3, rsubd=(8, 10))
-    map = np.arange(3*8*10*npix)
-    map = map.reshape((3, 8, 10, npix))
-    md.appendmaps(map)
-    map = map.reshape((3, 1, 8, 10, npix))
-    md.appendmaps(map)
-    combmap = np.append(np.zeros((3, 1, 8, 10, npix)), map, axis=1)
-    combmap = np.append(combmap, map, axis=1)
-    yield ok_, np.all(combmap == md.map)
-    yield eq_, (3, 3, 8, 10, npix), md.map.shape
-    #Should be possible to append a MapData object as well
-    md = mapmod.MapData(nside)
-    md2 = mapmod.MapData(nside)
-    md.appendmaps(md2)
     yield eq_, (2, npix), md.map.shape
-    md2 = mapmod.MapData(nside*2)
+    map = shaperange((3, 4, npix, 3, 1))
+    md = mapmod.MapData(nside, map=map)
     def func():
-        md.appendmaps(md2)
+        md.appendmaps(map, along_axis=2)
     yield assert_raises, ValueError, func
+    md.appendmaps(map, along_axis=4)
+    yield eq_, (3, 4, npix, 3, 2), md.map.shape

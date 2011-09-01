@@ -190,47 +190,62 @@ def _mk_pix2xy():
         else:
             _pix2y[i] = int(b[-2::-2][::-1], 2)
 
-def degrade_average(mapd, nside_n):
+def degrade_average(md, nside_n):
     """Degrade input map to nside resolution by averaging over pixels.
     
     """
     switched = False
-    if mapd.ordering == 'ring':
+    if md.ordering == 'ring':
         switched = True
-        mapd.switchordering()
+        md.switchordering()
 
-    redfact = (mapd.nside//nside_n)**2
-    temp = np.reshape(mapd.map, np.append(mapd.map.shape[:-1], 
-                        (12*nside_n*nside_n, redfact)))
-    mapd.map = np.average(temp, axis=-1)
-    mapd.nside = nside_n
-    if switched: mapd.switchordering()
-    return mapd
+    redfact = (md.nside//nside_n)**2
+    temp = np.reshape(md.map, md.map.shape[:md.pixaxis] + 
+                      (12*nside_n*nside_n, redfact) + 
+                      md.map.shape[md.pixaxis + 1:])
+    nmap = MapData(nside_n, ordering='nested')
+    nmap.map = np.average(temp, axis=md.pixaxis + 1)
+    if switched: nmap.switchordering()
+    return nmap
 
-def degrade(mapd, nside_n, pixwin=None):
+def degrade(md, nside_n, pixwin=None):
     if pixwin is None:
-        return degrade_average(mapd, nside_n)
+        return degrade_average(md, nside_n)
+    else:
+        raise NotImplementedError()
 
-def ring2nest(map, nside):
+def ring2nest(md):
     global _r2n
-    b = bin(nside)[2:]
-    if (b[0] != '1' or int(b[1:],2) != 0):
-        raise ValueError('nest2ring: nside has invalid value')
 
-    if not _r2n.has_key(nside):
-        _init_r2n(nside)
-    return map[..., _r2n[nside]]
+    if not _r2n.has_key(md.nside):
+        _init_r2n(md.nside)
+    view = []
+    for i in range(md.pixaxis):
+        view.append(Ellipsis)
+    view.append(_r2n[md.nside])
+    for i in range(md.map.ndim-1-md.pixaxis):
+        view.append(Ellipsis)
+    md.map = md.map[view]
+    md.ordering='nested'
 
-def nest2ring(map, nside):
+    return md
+
+def nest2ring(md):
     global _n2r
 
-    b = bin(nside)[2:]
-    if (b[0] != '1' or int(b[1:], 2) != 0):
-        raise ValueError('nest2ring: nside has invalid value')
+    if not _n2r.has_key(md.nside):
+        _init_n2r(md.nside)
 
-    if not _n2r.has_key(nside):
-        _init_n2r(nside)
-    return map[..., _n2r[nside]]
+    view = []
+    for i in range(md.pixaxis):
+        view.append(Ellipsis)
+    view.append(_n2r[md.nside])
+    for i in range(md.map.ndim-1-md.pixaxis):
+        view.append(Ellipsis)
+
+    md.map = md.map[view]
+    md.ordering='ring'
+    return md
 
 def ring2nest_ind(ind, nside):
     global _r2n
@@ -276,6 +291,7 @@ class MapData(object):
                 raise TypeError("nside must be an integer")
             map = np.zeros(12*nside**2)
         self.nside = nside
+        self.polaxis = None
         self.map = map
         self.ordering = ordering
         self.polaxis = polaxis
@@ -286,8 +302,6 @@ class MapData(object):
     def setmap(self, map):
         if not isinstance(map, np.ndarray):
             raise TypeError("Map must be numpy array")
-        print self.pixaxis
-        print map.shape
         if map.shape[self.pixaxis] != 12*self.nside**2:
             #Try to autodetect pixel axis
             for i in range(map.ndim):
@@ -298,6 +312,9 @@ class MapData(object):
                 raise ValueError("""Pixel number of input map does not conform 
                                     to nside""")
         self._map = map
+        #Will raise an error if the new map does not have the correct number of
+        #elements along polaxis
+        self.polaxis = self.polaxis
 
     map = property(getmap, setmap)
 
@@ -332,99 +349,48 @@ class MapData(object):
     def setpolaxis(self, polaxis):
         if polaxis is not None:
             if self.map.shape[polaxis] != 3:
+                polaxis = None
                 raise ValueError("Polarization axis does not have 3 dimensions")
         self._polaxis = polaxis
 
+    polaxis = property(getpolaxis, setpolaxis)
+
     def switchordering(self):
         if self.ordering == 'ring':
-            self.map = ring2nest(self.map, self.nside)
-            self.ordering = 'nested'
+            self = ring2nest(self)
         elif self.ordering == 'nested':
-            self.map = nest2ring(self.map, self.nside)
-            self.ordering='ring'
+            self = nest2ring(self)
 
-    def appendmaps(self, map, along_axis=None):
+    def appendmaps(self, map, along_axis=0):
         """Add one or several maps to object instance.
 
-        The maps must be numpy arrays or MapData objects, and they must
-        conform to all dimensions of the existing map but one.
+        The maps must be numpy arrays or MapData objects, and along_axis
+        signifies the axis along which to append the map. If one of the maps
+        has one dimension more than the other, along_axis will be interpreted
+        to hold for that map, and the 'shorter' map will be reshaped before 
+        appending.
         """
 
         if isinstance(map, MapData):
             if map.nside != self.nside:
                 raise ValueError("Nside is not compatible")
             map = map.map
-        ndims = len(map.shape)
-        found = False
-        if ndims == len(self.map.shape):
-            if along_axis is None:
-                for i in range(ndims):
-                    if i != self.polaxis and i != self.pixaxis:
-                        if map.shape[i] != self.map.shape[i]:
-                            if not found:
-                                along_axis = i
-                                found = True
-                            else:
-                                raise ValueError("""More than one axis differs 
-                                                    in the existing and 
-                                                    appended map""")
-                if not found:
-                    raise ValueError("""No axis given, and ambiguous where
-                                        to append""")
-            if len(self.map.shape) == 1:
-                if along_axis == 0:
-                    self.map = self.map.reshape((1, len(self.map)))
-                    map = map.reshape((1, len(map)))
-                elif along_axis == 1:
-                    self.map = self.map.reshape((len(self.map), 1))
-                    map = map.reshape((len(map), 1))
-            elif along_axis == len(self.map.shape):
-                self.map = self.map.reshape(self.map.shape + (1,))
-                map = map.reshape(map.shape + (1,))
 
-        elif ndims == len(self.map.shape) + 1:
-            if along_axis is None:
-                smallind = 0
-                for i in range(ndims):
-                    if i != self.polaxis and i != self.pixaxis:
-                        if map.shape[i] != self.map.shape[smallind]:
-                            if not found:
-                                along_axis = i
-                                found = True
-                            else:
-                                raise ValueError("""More than one axis differs 
-                                                    in the existing and 
-                                                    appended map""")
-                        else:
-                            smallind += 1
-                if not found:
-                    raise ValueError("""No axis given, and ambiguous where
-                                        to append""")
-            self.map = self.map.reshape(self.map.shape[0:along_axis] + (1,) + 
+        if map.ndim == self.map.ndim:
+            pass
+        elif map.ndim == self.map.ndim + 1:
+            self.map = self.map.reshape(self.map.shape[0:along_axis] + (1,) +
                                         self.map.shape[along_axis:])
-        elif ndims == len(self.map.shape) - 1:
-            if along_axis is None:
-                smallind = 0
-                for i in range(ndims):
-                    if i != self.polaxis and i != self.pixaxis:
-                        if map.shape[smallind] != self.map.shape[i]:
-                            if not found:
-                                along_axis = i
-                                found = True
-                            else:
-                                raise ValueError("""More than one axis differs 
-                                                    in the existing and 
-                                                    appended map""")
-                        else:
-                            smallind += 1
-                if not found:
-                    raise ValueError("""No axis given, and ambiguous where
-                                        to append""")
-            map = map.reshape(map.shape[0:along_axis] + (1,) +
+        elif map.ndim == self.map.ndim - 1:
+            map = map.reshape(map.shape[0:along_axis] + (1,) + 
                               map.shape[along_axis:])
         else:
-            raise ValueError("Map has wrong number of dimensions")
+            raise ValueError("Incompatible number of dimensions between maps")
 
-        print map.shape
-        print along_axis
+        if along_axis == self.pixaxis:
+            raise ValueError("Cannot append along pixel axis")
+        if self.polaxis is not None:
+            if along_axis == self.polaxis:
+                raise ValueError("Cannot append along polarization axis")
+
         self.map = np.append(self.map, map, axis=along_axis)
