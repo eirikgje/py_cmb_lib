@@ -220,10 +220,14 @@ def test_appendcls():
     yield eq_, (3, 4, lmax, 3, 2), cd.cls.shape
 
 def test_speccls():
-    pass
-    #Default: Should assume that we want all spectras
-    #alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
-    #telist = ['TT', 'TE', 'EE']
+    #Default: Should assume we only want temperature
+    alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
+    telist = ['TT', 'TE', 'EE']
+    templist = ['TT']
+    cd = almmod.ClData(lmax)
+    yield eq_, cd.nspecs, 1
+    yield eq_, cd.spectra, templist
+    yield eq_, cd.specaxis, None
     #cd = almmod.ClData(lmax)
     #yield eq_, cd.nspecs, 6
     #yield eq_, cd.spectra, alllist
