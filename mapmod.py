@@ -199,14 +199,15 @@ def degrade_average(md, nside_n):
         switched = True
         md.switchordering()
 
-    redfact = (md.nside//nside_n)**2
+    redfact = (md.nside // nside_n) ** 2
     temp = np.reshape(md.map, md.map.shape[:md.pixaxis] + 
                       (12*nside_n*nside_n, redfact) + 
                       md.map.shape[md.pixaxis + 1:])
-    nmap = MapData(nside_n, ordering='nested')
-    nmap.map = np.average(temp, axis=md.pixaxis + 1)
-    if switched: nmap.switchordering()
-    return nmap
+    #nmap = MapData(nside_n, ordering='nested')
+    md._nside = nside_n
+    md.map = np.average(temp, axis=md.pixaxis + 1)
+    if switched: md.switchordering()
+    return md
 
 def degrade(md, nside_n, pixwin=None):
     if pixwin is None:
@@ -283,15 +284,21 @@ class MapData(object):
     for a map will be practically immutable after construction.
 
     """
-    def __init__(self, nside, ordering='ring', map=None, pixaxis=0,
+    def __init__(self, nside, ordering='ring', map=None, pixaxis=None,
                  rsubd=None, polaxis=None):
+        if map is not None and pixaxis is not None:
+            if map[pixaxis] != 12*nside**2:
+                raise ValueError("""Explicit pixaxis does not contain the right
+                                    number of pixels""")
+        if pixaxis is None:
+            pixaxis = 0
         self.pixaxis = pixaxis
+        self._nside = None
         if map is None:
             if not isinstance(nside, int):
                 raise TypeError("nside must be an integer")
             map = np.zeros(12*nside**2)
         self.nside = nside
-        self.polaxis = None
         self.map = map
         self.ordering = ordering
         self.polaxis = polaxis
@@ -302,7 +309,8 @@ class MapData(object):
     def setmap(self, map):
         if not isinstance(map, np.ndarray):
             raise TypeError("Map must be numpy array")
-        if map.shape[self.pixaxis] != 12*self.nside**2:
+        if (self.pixaxis >= map.ndim or 
+                map.shape[self.pixaxis] != 12*self.nside**2):
             #Try to autodetect pixel axis
             for i in range(map.ndim):
                 if map.shape[i] == 12*self.nside**2:
@@ -314,7 +322,6 @@ class MapData(object):
         self._map = map
         #Will raise an error if the new map does not have the correct number of
         #elements along polaxis
-        self.polaxis = self.polaxis
 
     map = property(getmap, setmap)
 
@@ -334,6 +341,8 @@ class MapData(object):
         return self._nside
 
     def setnside(self, nside):
+        if self._nside is not None:
+            raise ValueError("nside is immutable")
         if not isinstance(nside, int):
             raise TypeError("nside must be an integer")
         b = bin(nside)[2:]
@@ -344,12 +353,16 @@ class MapData(object):
     nside = property(getnside, setnside)
 
     def getpolaxis(self):
+        if self._polaxis is not None:
+            if self.cls.shape[self._polaxis] != 3:
+                raise ValueError("""Polarization axis has not been updated since
+                                    changing number of map dimensions""")
         return self._polaxis
 
     def setpolaxis(self, polaxis):
         if polaxis is not None:
             if self.map.shape[polaxis] != 3:
-                polaxis = None
+                self._polaxis = None
                 raise ValueError("Polarization axis does not have 3 dimensions")
         self._polaxis = polaxis
 

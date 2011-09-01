@@ -97,6 +97,7 @@ def test_sanity():
     yield ok_, np.all(md.map == map)
 
 def test_init():
+    map = np.arange(npix)
     def func():
         md = mapmod.MapData(nside=32.0)
     yield assert_raises, TypeError, func
@@ -117,19 +118,20 @@ def test_init():
     yield eq_, (3, npix, 4), md.map.shape
     md = mapmod.MapData(nside, map=np.zeros((3, 7, npix)))
     yield eq_, (3, 7, npix), md.map.shape
+    map = shaperange((3, npix, 5))
+    def func():
+        md = mapmod.MapData(nside, map=map, pixaxis=0)
+    yield assert_raises, ValueError, func
 
 def test_assign():
     md = mapmod.MapData(nside)
     def func():
         md.map = 4
     yield assert_raises, TypeError, func
+    #Nside is immutable
     def func():
-        md.nside = 12.0
-    yield assert_raises, TypeError, func
-    #TODO: Assignment of nside - up/degradation of map?
-    #def func():
-    #    md.nside = 12
-    #yield assert_raises, ValueError, func
+        md.nside = 12
+    yield assert_raises, ValueError, func
     def func():
         md.ordering = 'neste'
     yield assert_raises, ValueError, func
@@ -150,12 +152,25 @@ def test_assign():
         md.map = map
     except:
         raise AssertionError()
+    #Nside is immutable
+    md = mapmod.MapData(nside)
+    def func():
+        md.nside = 2*nside
+    yield assert_raises, ValueError, func
 
 def test_shape():
+    map = np.arange(npix)
     md = mapmod.MapData(nside)
     yield eq_, (npix,), md.map.shape
     md.map = np.zeros((4, npix, 5, 6))
     yield eq_, (4, npix, 5, 6), md.map.shape
+    yield eq_, 1, md.pixaxis
+    md.map = np.zeros((4, 5, 6, npix))
+    yield eq_, (4, 5, 6, npix), md.map.shape
+    yield eq_, 3, md.pixaxis
+    map = np.resize(map, (3, npix, 5))
+    md.map = map
+    yield eq_, (3, npix, 5), md.map.shape
     yield eq_, 1, md.pixaxis
 
 def test_pol():
@@ -171,6 +186,8 @@ def test_pol():
         md = mapmod.MapData(nside, map=map, polaxis=0)
     except:
         raise AssertionError()
+    md = mapmod.MapData(nside)
+    yield eq_, md.polaxis, None
 
 def test_degrade():
     nside = 4

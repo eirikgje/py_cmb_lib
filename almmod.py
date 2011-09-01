@@ -14,32 +14,44 @@ def lm2ind(lm):
     return lm[0] * (lm[0] + 1) // 2 + lm[1]
 
 class AlmData(object):
-    def __init__(self, lmax, mmax=None, alms=None, lsubd=None, rsubd=None,
-                 pol=False):
+    def __init__(self, lmax, mmax=None, alms=None, indaxis=None,
+                 polaxis=None):
+        if alms is not None and indaxis is not None:
+            if alms[indaxis] != lmax * (lmax + 1) // 2 + lmax + 1:
+                raise ValueError("""Explicit indaxis does not contain right
+                                    number of elements""")
+        if indaxis is None:
+            indaxis = 0
+        self.indaxis = indaxis
+        self._lmax = None
         if mmax != None:
             raise NotImplementedError()
         self.nnind = lmax * (lmax + 1) // 2 + lmax + 1
-        self.dyn_ind = 0
-        self._alms = None
-        self.subd = ()
-        self.pol = pol
-        if lsubd is not None:
-            self.subdivide(lsubd)
-        if rsubd is not None:
-            self.subdivide(rsubd, left_of_dyn_d=False)
         if alms is None:
-            alms = np.zeros(self.subd[0:self.dyn_ind] + (1,) + 
-                           self.subd[self.dyn_ind:] + (self.nnind,),
-                           dtype = np.complex)
-        self.alms = alms
+            alms = np.zeros(self.nnind, dtype=np.complex)
         self.lmax = lmax
         self.mmax = lmax
+        self.alms = alms
+        self.polaxis = polaxis
 
     def getalms(self):
         return self._alms
 
     def setalms(self, alms):
-        self._alms = self.conform_alms(alms)
+        if not isinstance(alms, np.ndarray):
+            raise TypeError("Alms must be numpy array")
+        if not alms.dtype == np.complex:
+            raise TypeError("Alms must be complex")
+        if self.indaxis >= alms.ndim or alms.shape[self.indaxis] != self.nnind:
+            #Try to autodetect pixel axis
+            for i in range(alms.ndim):
+                if alms.shape[i] == self.nnind:
+                    self.indaxis = i
+                    break
+            else:
+                raise ValueError("""Index number of input alms does not conform 
+                                    to lmax""")
+        self._alms = alms
 
     alms = property(getalms, setalms)
 
@@ -47,158 +59,98 @@ class AlmData(object):
         return self._lmax
 
     def setlmax(self, lmax):
+        if self._lmax is not None:
+            raise ValueError("Lmax is immutable")
         if not isinstance(lmax, int):
             raise TypeError("lmax must be an integer")
-        else:
-            if self.alms.shape[-1] != lmax * (lmax + 1) / 2 + lmax + 1:
-                raise ValueError("""lmax must be compatible with last
-                                    dimension of alm""")
-            self._lmax = lmax
+        self._lmax = lmax
 
     lmax = property(getlmax, setlmax)
 
-    def getpol(self):
-        return self._pol
+    def getpolaxis(self):
+        if self._polaxis is not None:
+            if self.cls.shape[self._polaxis] != 3:
+                raise ValueError("""Polarization axis has not been updated since
+                                    changing number of map dimensions""")
+        return self._polaxis
 
-    def setpol(self, pol):
-        if not isinstance(pol, bool):
-            raise TypeError("pol must be a boolean variable")
-        if pol:
-            if len(self.subd) > 0:
-                if not self.subd[-1] == 3:
-                    self.subdivide(3, left_of_dyn_d=False)
-            else:
-                self.subdivide(3, left_of_dyn_d=False)
-        self._pol = pol
+    def setpolaxis(self, polaxis):
+        if polaxis is not None:
+            if self.alms.shape[polaxis] != 3:
+                self._polaxis = None
+                raise ValueError("Polarization axis does not have 3 dimensions")
+        self._polaxis = polaxis
 
-    pol = property(getpol, setpol)
+    polaxis = property(getpolaxis, setpolaxis)
 
-    def subdivide(self, vals, left_of_dyn_d=True):
-        """Can take either int, tuple or numpy arrays as arguments."""
-        
-#        By default, subdividing will be done in such a way that the dynamical
-#        index (i.e. number of alm samples or whatever) is the next-to-last one
-#        (the last one being the number of els). Note that adding samples
-#        should have nothing to do with subdividing - subdividing is for those
-#        cases where each sample will have more than one alm (polarization, 
-#        various frequencies etc.) Note, however, that for polarization it is
-#        possible to just set the 'pol' keyword to True for the object, and the 
-#        subdivision will be taken care of. Also note that after subdividing, 
-#        each map array added (or assigned) to the MapData instance must have the
-#        shape (x1, x2, ..., xn, n, npix) or (x1, x2, ..., xn, npix) where
-#        x1, x2, ..., xn are the subdivisions and n is the number of map samples
-#        added (could be 1 and will be interpreted as 1 if missing). 
-#        Subdivision can be done several times. The new dimension will then
-#        be the leftmost dimension in the resulting MapData.map array.
-#
-#        """
-        old_dyn_ind = self.dyn_ind
-        if isinstance(vals, int):
-            if left_of_dyn_d:
-                self.dyn_ind += 1
-        elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
-            if left_of_dyn_d:
-                self.dyn_ind += len(vals)
-        else:
-            raise TypeError('Must be int, tuple or np.ndarray')
-
-        if left_of_dyn_d:
-            if isinstance(vals, int):
-                self.subd = (vals,) + self.subd
-            else:
-                self.subd = tuple(vals) + self.subd
-        else:
-            if isinstance(vals, int):
-                self.subd = self.subd + (vals,)
-            else:
-                self.subd = self.subd + tuple(vals)
-
-        if self.alms is not None:
-            self._alms = np.resize(self.alms, self.subd[0:self.dyn_ind] +
-                                  (self.alms.shape[old_dyn_ind],) +
-                                  self.subd[self.dyn_ind:] +
-                                  (self.alms.shape[-1],))
-
-    def appendalms(self, alms):
+    def appendalms(self, alms, along_axis=0):
         """Add one or several alms to object instance.
 
-        The input alms(s) must be numpy arrays, or AlmData objects
-        and they must have the shape
-        (subd, nalms, nels) or (subd, nels) where subd is the current
-        subdivision of the AlmData instance, nels is the number
-        of elements for l, m >= 0 (lmax * (lmax + 1) / 2 + lmax + 1) for the
-        alms already added to the object instance. nalms can be any number, 
-        and if this dimension is missing from the array, it will be interpreted 
-        as alms for a single map. 
-        If there are no subdivisions, a (nels) numpy array is acceptable.
-
+        The alms must be numpy arrays or AlmData objects, and along_axis
+        signifies the axis along which to append the alms. If one of the alms
+        has one dimension more than the other, along_axis will be interpreted
+        to hold for that alms, and the 'shorter' alms will be reshaped before 
+        appending.
         """
+
         if isinstance(alms, AlmData):
             if alms.lmax != self.lmax:
                 raise ValueError("Lmax is not compatible")
             alms = alms.alms
-        self.alms = np.append(self.alms, self.conform_alms(alms), 
-                             axis=self.dyn_ind)
 
-    def conform_alms(self, alms):
-        """Make input alms acceptable shape, or raise exception.
-        
-        Input alms is only compared to the current subdivision, not any present
-        alms.
-        
-        """
-        if not isinstance(alms, np.ndarray):
-            raise TypeError('Alms must be numpy array')
-        if not alms.dtype.name.startswith('complex'):
-            raise TypeError("alms must be complex array")
-        if alms.dtype != np.complex:
-            raise NotImplementedError()
-        mlen = len(self.subd) + 2
-        if mlen > alms.ndim + 1:
-            raise ValueError('Too few dimensions in alms')
-        elif mlen < alms.ndim:
-            raise ValueError('Too many dimensions in alms')
-        if mlen == alms.ndim:
-            #Explicit dynamic dimension
-            almsubd = (alms.shape[0:self.dyn_ind] + 
-                        alms.shape[self.dyn_ind + 1:-1])
-            if (almsubd != self.subd):
-                raise ValueError("""Alm dimensions do not conform to AlmData
-                                subdivision""")
-        elif mlen == alms.ndim + 1:
-            #Dynamic dimension is implicit
-            almsubd = (alms.shape[0:-1])
-            if (almsubd  != self.subd):
-                raise ValueError("""Alm dimensions do not conform to AlmData
-                                subdivision""")
-            else:
-                alms = alms.reshape(self.subd[0:self.dyn_ind] + (1,) + 
-                                  self.subd[self.dyn_ind:] + 
-                                  (alms.shape[-1],))
-        return alms
+        if alms.ndim == self.alms.ndim:
+            pass
+        elif alms.ndim == self.alms.ndim + 1:
+            self.alms = self.alms.reshape(self.alms.shape[0:along_axis] + (1,) +
+                                        self.alms.shape[along_axis:])
+        elif alms.ndim == self.alms.ndim - 1:
+            alms = alms.reshape(alms.shape[0:along_axis] + (1,) + 
+                              alms.shape[along_axis:])
+        else:
+            raise ValueError("Incompatible number of dimensions between alms")
+
+        if along_axis == self.indaxis:
+            raise ValueError("Cannot append along index axis")
+        if self.polaxis is not None:
+            if along_axis == self.polaxis:
+                raise ValueError("Cannot append along polarization axis")
+
+        self.alms = np.append(self.alms, alms, axis=along_axis)
 
 class ClData(object):
-    def __init__(self, lmax, cls=None, lsubd=None, rsubd=None, spectra='all'):
-        self.dyn_ind = 0
-        self._cls = None
-        self.subd = ()
+    def __init__(self, lmax, cls=None, spectra='temp', specaxis=None, 
+                 claxis=None):
+        if cls is not None and claxis is not None:
+            if cls.shape[claxis] != lmax:
+                raise ValueError("""Explicit claxis does not contain the right
+                                    number of elements""")
+        if claxis is None:
+            claxis = 0
+        self.claxis = claxis
         self.spectra = spectra
-        if lsubd is not None:
-            self.subdivide(lsubd)
-        if rsubd is not None:
-            self.subdivide(rsubd, left_of_dyn_d=False)
         if cls is None:
-            cls = np.zeros(self.subd[0:self.dyn_ind] + (1,) + 
-                           self.subd[self.dyn_ind:] + (self._nspecs,) + 
-                           (lmax,))
-        self.cls = cls
+            cls = np.zeros(lmax)
+        self._lmax = None
         self.lmax = lmax
+        self.cls = cls
+        self.specaxis = specaxis
 
     def getcls(self):
         return self._cls
 
     def setcls(self, cls):
-        self._cls = self.conform_cls(cls)
+        if not isinstance(cls, np.ndarray):
+            raise TypeError("Cls must be numpy array")
+        if self.claxis >= cls.ndim or cls.shape[self.claxis] != self.lmax:
+            #Try to autodetect cl-axis
+            for i in range(cls.ndim):
+                if cls.shape[i] == self.lmax:
+                    self.claxis = i
+                    break
+            else:
+                raise ValueError("""Index number of input cls does not conform 
+                                    to lmax""")
+        self._cls = cls
 
     cls = property(getcls, setcls)
 
@@ -206,13 +158,11 @@ class ClData(object):
         return self._lmax
 
     def setlmax(self, lmax):
+        if self._lmax is not None:
+            raise ValueError("Lmax is immutable")
         if not isinstance(lmax, int):
             raise TypeError("lmax must be an integer")
-        else:
-            if self.cls.shape[-1] != lmax:
-                raise ValueError("""lmax must be compatible with last
-                                    dimension of cls""")
-            self._lmax = lmax
+        self._lmax = lmax
 
     lmax = property(getlmax, setlmax)
 
@@ -225,6 +175,8 @@ class ClData(object):
                 spectra = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
             elif spectra.lower() == 't-e':
                 spectra = ['TT', 'TE', 'EE']
+            elif spectra.lower() == 'temp':
+                spectra = ['TT']
             else:
                 raise TypeError("""Setting the spectra manually must be done
                                   using a list, or one of the predefined
@@ -239,116 +191,62 @@ class ClData(object):
                     raise ValueError("Spectrum must have valid value")
 
         nspecs = len(spectra)
-        #cls will only be None during construction
-        if self.cls is not None:
-            if nspecs != self.cls.shape[-2]:
-                raise ValueError("""Number of spectra must conform to the
-                                    next-to-last dimension of the cls""")
+
         self._spectra = spectra
-        self._nspecs = nspecs
+        self.nspecs = nspecs
 
     spectra = property(getspectra, setspectra)
 
-    def subdivide(self, vals, left_of_dyn_d=True):
-        """Can take either int, tuple or numpy arrays as arguments."""
-        
-#        By default, subdividing will be done in such a way that the dynamical
-#        index (i.e. number of alm samples or whatever) is the next-to-last one
-#        (the last one being the number of els). Note that adding samples
-#        should have nothing to do with subdividing - subdividing is for those
-#        cases where each sample will have more than one alm (polarization, 
-#        various frequencies etc.) Note, however, that for polarization it is
-#        possible to just set the 'pol' keyword to True for the object, and the 
-#        subdivision will be taken care of. Also note that after subdividing, 
-#        each map array added (or assigned) to the MapData instance must have the
-#        shape (x1, x2, ..., xn, n, npix) or (x1, x2, ..., xn, npix) where
-#        x1, x2, ..., xn are the subdivisions and n is the number of map samples
-#        added (could be 1 and will be interpreted as 1 if missing). 
-#        Subdivision can be done several times. The new dimension will then
-#        be the leftmost dimension in the resulting MapData.map array.
-#
-#        """
-        old_dyn_ind = self.dyn_ind
-        if isinstance(vals, int):
-            if left_of_dyn_d:
-                self.dyn_ind += 1
-        elif isinstance(vals, tuple) or isinstance(vals, np.ndarray):
-            if left_of_dyn_d:
-                self.dyn_ind += len(vals)
-        else:
-            raise TypeError('Must be int, tuple or np.ndarray')
+    def getspecaxis(self):
+        if self._specaxis is not None:
+            if self.cls.shape[self._specaxis] != self.nspecs:
+                raise ValueError("""Spectrum axis has not been updated since
+                                    changing number of map dimensions""")
+        return self._specaxis
 
-        if left_of_dyn_d:
-            if isinstance(vals, int):
-                self.subd = (vals,) + self.subd
-            else:
-                self.subd = tuple(vals) + self.subd
-        else:
-            if isinstance(vals, int):
-                self.subd = self.subd + (vals,)
-            else:
-                self.subd = self.subd + tuple(vals)
+    def setspecaxis(self, specaxis):
+        if specaxis is not None:
+            if self.cls.shape[specaxis] != self.nspecs:
+                self._specaxis = None
+                raise ValueError("""Spectrum axis does not have the right
+                                    number of dimensions""")
+        self._specaxis = specaxis
 
-        if self.cls is not None:
-            self._cls = np.resize(self.cls, self.subd[0:self.dyn_ind] +
-                                  (self.cls.shape[old_dyn_ind],) +
-                                  self.subd[self.dyn_ind:] + (self._nspecs,) + 
-                                  (self.cls.shape[-1],))
+    specaxis = property(getspecaxis, setspecaxis)
 
-    def appendcls(self, cls):
+    def appendcls(self, cls, along_axis=0):
         """Add one or several cls to object instance.
 
-        The input cls(s) must be numpy arrays, or AlmData objects
-        and they must have the shape
-        (subd, ncls, nels) or (subd, nels) where subd is the current
-        subdivision of the AlmData instance, nels is the number
-        of elements for l, m >= 0 (lmax * (lmax + 1) / 2 + lmax + 1) for the
-        cls already added to the object instance. ncls can be any number, 
-        and if this dimension is missing from the array, it will be interpreted 
-        as cls for a single map. 
-        If there are no subdivisions, a (nels) numpy array is acceptable.
-
+        The cls must be numpy arrays or ClData objects, and along_axis
+        signifies the axis along which to append the cls. If one of the cls
+        has one dimension more than the other, along_axis will be interpreted
+        to hold for that cls, and the 'shorter' cls will be reshaped before 
+        appending. If cls is a ClData object, none of its attributes except
+        lmax and the cl array will be preserved.
         """
+
         if isinstance(cls, ClData):
             if cls.lmax != self.lmax:
                 raise ValueError("Lmax is not compatible")
-            if cls._nspecs != self._nspecs:
-                raise ValueError("Number of spectra are different")
-            if cls.spectra != self.spectra:
-                raise ValueError("Spectra are different")
             cls = cls.cls
-        self.cls = np.append(self.cls, self.conform_cls(cls), 
-                             axis=self.dyn_ind)
 
-    def conform_cls(self, cls):
-        """Make input cls acceptable shape, or raise exception.
-        
-        Input cls is only compared to the current subdivision, not any present
-        cls.
-        
-        """
-        if not isinstance(cls, np.ndarray):
-            raise TypeError('Cls must be numpy array')
-        mlen = len(self.subd) + 3
-        if mlen > cls.ndim + 1:
-            raise ValueError('Too few dimensions in cls')
-        elif mlen < cls.ndim:
-            raise ValueError('Too many dimensions in cls')
-        if mlen == cls.ndim:
-            #Explicit dynamic dimension
-            clsubd = (cls.shape[0:self.dyn_ind] + 
-                        cls.shape[self.dyn_ind + 1:-2])
-            if (clsubd != self.subd):
-                raise ValueError("""Cl dimensions do not conform to ClData
-                                subdivision""")
-        elif mlen == cls.ndim + 1:
-            #Dynamic dimension is implicit
-            clsubd = (cls.shape[0:-2])
-            if (clsubd  != self.subd):
-                raise ValueError("""Cl dimensions do not conform to ClData
-                                subdivision""")
-            else:
-                cls = cls.reshape(self.subd[0:self.dyn_ind] + (1,) + 
-                                  self.subd[self.dyn_ind:] + (self._nspecs,) + 
-                                  (cls.shape[-1],))
-        return cls
+        if cls.ndim == self.cls.ndim:
+            pass
+        elif cls.ndim == self.cls.ndim + 1:
+            self.cls = self.cls.reshape(self.cls.shape[0:along_axis] + (1,) +
+                                        self.cls.shape[along_axis:])
+            if self.specaxis is not None:
+                self.specaxis += 1
+        elif cls.ndim == self.cls.ndim - 1:
+            cls = cls.reshape(cls.shape[0:along_axis] + (1,) + 
+                              cls.shape[along_axis:])
+        else:
+            raise ValueError("Incompatible number of dimensions between cls")
+
+        if along_axis == self.claxis:
+            raise ValueError("Cannot append along pixel axis")
+        if self.specaxis is not None:
+            if along_axis == self.specaxis:
+                raise ValueError("Cannot append along spectrum axis")
+
+        self.cls = np.append(self.cls, cls, axis=along_axis)

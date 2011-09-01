@@ -26,16 +26,18 @@ def shaperange_cplx(shape):
 lmax = 95
 nels = lmax * (lmax + 1) // 2 + lmax + 1
 alms = shaperange_cplx((nels,))
-cls = shaperange((6, lmax), dtype=float)
+cls = shaperange((lmax,), dtype=float)
 
 def test_sanity():
+    alms = shaperange_cplx((nels,))
     ad = almmod.AlmData(lmax)
     yield ok_, ad.lmax == lmax
     yield ok_, ad.alms.dtype == np.complex
     ad = almmod.AlmData(lmax, alms=alms)
     yield ok_, np.all(ad.alms == alms)
-    ad = almmod.AlmData(lmax, lsubd=(3, 2, 1))
-    yield ok_, np.all((3, 2, 1) == ad.subd)
+    alms = shaperange_cplx((4, nels, 8))
+    ad = almmod.AlmData(lmax, alms=alms)
+    yield eq_, ad.alms.shape, (4, nels, 8)
 
 def test_init():
     alms = shaperange_cplx((nels,))
@@ -51,15 +53,7 @@ def test_init():
     yield assert_raises, TypeError, func
     #Given no alms, should initialize alms of zeros with given lmax
     ad = almmod.AlmData(lmax=lmax)
-    yield ok_, np.all(ad.alms == np.zeros((1, nels)))
-    ad = almmod.AlmData(lmax, lsubd=(3, 4))
-    yield eq_, (3, 4, 1, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax, rsubd=(2, 5))
-    yield eq_, (1, 2, 5, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax, lsubd=6, rsubd=(2, 5))
-    yield eq_, (6, 1, 2, 5, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax, lsubd=(6, 3), rsubd=2)
-    yield eq_, (6, 3, 1, 2, nels), ad.alms.shape
+    yield ok_, np.all(ad.alms == np.zeros(nels))
     #Should not be able to init with a non-complex array
     alms = np.arange(nels)
     def func():
@@ -71,143 +65,67 @@ def test_assign():
     def func():
         ad.alms = 4
     yield assert_raises, TypeError, func
+    #lmax is immutable
     def func():
-        ad.lmax = 12.0
-    yield assert_raises, TypeError, func
-    #After subdividing, should be possible to assign alms of the given size
-    ad = almmod.AlmData(lmax)
-    ad.subdivide(3)
-    alms = np.zeros((3, nels), dtype=np.complex)
-    try:
-        ad.alms = alms
-    except:
-        raise AssertionError()
-    ad = almmod.AlmData(lmax)
-    ad.subdivide((3, 4), left_of_dyn_d=False)
-    alms = np.zeros((3, 4, nels), dtype=np.complex)
-    try:
-        ad.alms = alms
-    except:
-        raise AssertionError()
-    alms = np.zeros((1, 3, 4, nels), dtype=np.complex)
-    try:
-        ad.alms = alms
-    except:
-        raise AssertionError()
+        ad.lmax = 12
+    yield assert_raises, ValueError, func
+    #Non-complex
     alms = np.arange(nels)
     def func():
         ad.alms = alms
     yield assert_raises, TypeError, func
 
 def test_shape():
-    ad = almmod.AlmData(lmax)
-    yield eq_, (1, nels), ad.alms.shape
-    ad.subdivide(5)
-    yield eq_, (5, 1, nels), ad.alms.shape
     alms = shaperange_cplx((nels,))
-    def func():
-        ad.alms = alms
-    yield assert_raises, ValueError, func
-    alms.resize((2, 3, 4, nels))
-    def func():
-        ad.alms = alms
-    yield assert_raises, ValueError, func
-    ad = almmod.AlmData(lmax, lsubd=(3, 2))
-    yield eq_, (3, 2, 1, nels), ad.alms.shape
-    #Should be possible to choose whether the subdivision should be to the
-    #left or right of the dynamical dimension
     ad = almmod.AlmData(lmax)
-    ad.subdivide(3, left_of_dyn_d=False)
-    yield eq_, (1, 3, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax)
-    ad.subdivide((3, 5), left_of_dyn_d=False)
-    yield eq_, (1, 3, 5, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax)
-    ad.subdivide((3, 5))
-    yield eq_, (3, 5, 1, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax)
-    ad.subdivide((3, 5), left_of_dyn_d=False)
-    ad.subdivide(4)
-    yield eq_, (4, 1, 3, 5, nels), ad.alms.shape
+    yield eq_, (nels,), ad.alms.shape
+    alms = np.resize(alms, (2, 3, 4, nels))
+    ad.alms = alms
+    yield eq_, (2, 3, 4, nels), ad.alms.shape
+    alms = np.resize(alms, (3, nels, 5))
+    ad.alms = alms
+    yield eq_, (3, nels, 5), ad.alms.shape
 
 def test_pol():
     #Testing the polarization feature
-    ad = almmod.AlmData(lmax, pol=True)
-    yield eq_, (1, 3, nels), ad.alms.shape
-    alms = shaperange_cplx((1, 3, nels))
-    ad.alms = alms
-    yield ok_, np.all(alms == ad.alms)
+    def func():
+        ad = almmod.AlmData(lmax, polaxis=0)
+    yield assert_raises, ValueError, func
+    alms=np.zeros((3, nels), dtype=np.complex)
+    def func():
+        ad = almmod.AlmData(lmax, alms=alms, polaxis=1)
+    yield assert_raises, ValueError, func
+    try:
+        ad = almmod.AlmData(lmax, alms=alms, polaxis=0)
+    except:
+        raise AssertionError()
     ad = almmod.AlmData(lmax)
-    ad.pol = True
-    yield eq_, (1, 3, nels), ad.alms.shape
-    #'pol' keyword is only supposed to be a 'compatibility flag' - i.e., if 
-    #the AlmData object already is compatible, then do nothing
-    #alms = np.reshape(np.arange(3*nels), (1, 3, nels))
-    alms = shaperange_cplx((1, 3, nels))
-    ad = almmod.AlmData(lmax, rsubd=3, alms=alms)
-    alms = ad.alms
-    ad.pol = True
-    yield ok_, np.all(alms == ad.alms)
-    #Other way around:
-    ad = almmod.AlmData(lmax, pol=True)
-    alms = ad.alms
-    ad.pol = False
-    yield ok_, np.all(alms == ad.alms)
+    yield eq_, ad.polaxis, None
 
 def test_appendalms():
     ad = almmod.AlmData(lmax)
-    alms = shaperange_cplx((nels,))
-    ad.appendalms(alms)
-    combalms = np.append(np.zeros(nels, dtype=np.complex), alms)
-    combalms = np.reshape(combalms, (2, nels))
+    alms = shaperange((1, nels), dtype=np.complex)
+    ad.appendalms(alms, along_axis=0)
+    combalms = np.append(np.zeros((1, nels)), alms, axis=0)
     yield ok_, np.all(combalms == ad.alms)
     yield eq_, (2, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax)
-    alms = shaperange_cplx((nels,))
-    ad.appendalms(alms)
-    combalms = np.append(np.zeros(nels, dtype=np.complex), alms)
-    combalms = np.reshape(combalms, (2, nels))
+    ad = almmod.AlmData(lmax, alms=alms)
+    ad.appendalms(alms, along_axis=0)
+    combalms = np.append(alms, alms, axis=0)
     yield ok_, np.all(combalms == ad.alms)
     yield eq_, (2, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax, lsubd=(3, 2))
-    alms = shaperange_cplx((3, 2, nels))
+    #Default axis should be 0:
+    ad = almmod.AlmData(lmax, alms=alms)
     ad.appendalms(alms)
-    alms = alms.reshape((3, 2, 1, nels))
-    combalms = np.append(np.zeros((3, 2, 1, nels), dtype=np.complex), alms, 
-                         axis=2)
     yield ok_, np.all(combalms == ad.alms)
-    yield eq_, (3, 2, 2, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax, rsubd=8)
-    alms = shaperange_cplx((8, nels))
-    ad.appendalms(alms)
-    alms = alms.reshape((1, 8, nels))
-    combalms = np.append(np.zeros((1, 8, nels), dtype=np.complex), alms, 
-                         axis=0)
-    yield ok_, np.all(combalms == ad.alms)
-    yield eq_, (2, 8, nels), ad.alms.shape
-    ad = almmod.AlmData(lmax, lsubd=3, rsubd=(8, 10))
-    alms = shaperange_cplx((3, 8, 10, nels))
-    ad.appendalms(alms)
-    alms = alms.reshape((3, 1, 8, 10, nels))
-    ad.appendalms(alms)
-    combalms = np.append(np.zeros((3, 1, 8, 10, nels)), alms, axis=1)
-    combalms = np.append(combalms, alms, axis=1)
-    yield ok_, np.all(combalms == ad.alms)
-    yield eq_, (3, 3, 8, 10, nels), ad.alms.shape
-    #Should be possible to append a AlmData object as well
-    ad = almmod.AlmData(lmax)
-    ad2 = almmod.AlmData(lmax)
-    ad.appendalms(ad2)
     yield eq_, (2, nels), ad.alms.shape
-    ad2 = almmod.AlmData(lmax*2)
+    alms = shaperange((3, 4, nels, 3, 1), dtype=np.complex)
+    ad = almmod.AlmData(lmax, alms=alms)
     def func():
-        ad.appendalms(ad2)
+        ad.appendalms(alms, along_axis=2)
     yield assert_raises, ValueError, func
-    ad = almmod.AlmData(lmax)
-    alms = np.arange(nels)
-    def func():
-        ad.appendalms(alms)
-    yield assert_raises, TypeError, func
+    ad.appendalms(alms, along_axis=4)
+    yield eq_, (3, 4, nels, 3, 2), ad.alms.shape
 
 def test_lm2ind():
     lm2inddic = {(6, 4):25, (0, 0):0, (10, 0):55}
@@ -229,15 +147,17 @@ def test_lm2ind():
 
 #Testing of cl-class
 def test_sanitycl():
+    cls = shaperange((lmax,), dtype=float)
     cd = almmod.ClData(lmax)
     yield ok_, cd.lmax == lmax
     cd = almmod.ClData(lmax, cls=cls)
     yield ok_, np.all(cd.cls == cls)
-    cd = almmod.ClData(lmax, lsubd=(3, 2, 1))
-    yield ok_, np.all((3, 2, 1) == cd.subd)
+    cls = shaperange_cplx((4, lmax, 8))
+    ad = almmod.ClData(lmax, cls=cls)
+    yield eq_, ad.cls.shape, (4, lmax, 8)
 
 def test_initcl():
-    cls = shaperange((6, lmax))
+    cls = np.arange(lmax)
     def func():
         cd = almmod.ClData(lmax=95.0)
     yield assert_raises, TypeError, func
@@ -250,151 +170,81 @@ def test_initcl():
     yield assert_raises, TypeError, func
     #Given no cls, should initialize cls of zeros with given lmax
     cd = almmod.ClData(lmax=lmax)
-    yield ok_, np.all(cd.cls == np.zeros((1, 6, lmax)))
-    cd = almmod.ClData(lmax, lsubd=(3, 4))
-    yield eq_, (3, 4, 1, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax, rsubd=(2, 5))
-    yield eq_, (1, 2, 5, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax, lsubd=6, rsubd=(2, 5))
-    yield eq_, (6, 1, 2, 5, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax, lsubd=(6, 3), rsubd=2)
-    yield eq_, (6, 3, 1, 2, 6, lmax), cd.cls.shape
+    yield ok_, np.all(cd.cls == np.zeros(lmax))
+    yield eq_, cd.cls.shape, (lmax,)
 
 def test_assigncl():
     cd = almmod.ClData(lmax)
     def func():
         cd.cls = 4
     yield assert_raises, TypeError, func
+    #Lmax is immutable
     def func():
-        cd.lmax = 12.0
-    yield assert_raises, TypeError, func
-    #After subdividing, should be possible to assign cls of the given size
-    cd = almmod.ClData(lmax)
-    cd.subdivide(3)
-    cls = np.zeros((3, 6, lmax))
-    try:
-        cd.cls = cls
-    except:
-        raise AssertionError()
-    cd = almmod.ClData(lmax)
-    cd.subdivide((3, 4), left_of_dyn_d=False)
-    cls = np.zeros((3, 4, 6, lmax))
-    try:
-        cd.cls = cls
-    except:
-        raise AssertionError()
-    cls = np.zeros((1, 3, 4, 6, lmax))
-    try:
-        cd.cls = cls
-    except:
-        raise AssertionError()
+        cd.lmax = 12
+    yield assert_raises, ValueError, func
 
 def test_shapecl():
+    cls = shaperange((lmax,), dtype=float)
     cd = almmod.ClData(lmax)
-    yield eq_, (1, 6, lmax), cd.cls.shape
-    cd.subdivide(5)
-    yield eq_, (5, 1, 6, lmax), cd.cls.shape
-    cls = shaperange_cplx((lmax,))
-    def func():
-        cd.cls = cls
-    yield assert_raises, ValueError, func
-    cls.resize((2, 3, 4, 6, lmax))
-    def func():
-        cd.cls = cls
-    yield assert_raises, ValueError, func
-    cd = almmod.ClData(lmax, lsubd=(3, 2))
-    yield eq_, (3, 2, 1, 6, lmax), cd.cls.shape
-    #Should be possible to choose whether the subdivision should be to the
-    #left or right of the dynamical dimension
-    cd = almmod.ClData(lmax)
-    cd.subdivide(3, left_of_dyn_d=False)
-    yield eq_, (1, 3, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax)
-    cd.subdivide((3, 5), left_of_dyn_d=False)
-    yield eq_, (1, 3, 5, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax)
-    cd.subdivide((3, 5))
-    yield eq_, (3, 5, 1, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax)
-    cd.subdivide((3, 5), left_of_dyn_d=False)
-    cd.subdivide(4)
-    yield eq_, (4, 1, 3, 5, 6, lmax), cd.cls.shape
+    yield eq_, (lmax,), cd.cls.shape
+    cls = np.resize(cls, (2, 3, 4, lmax))
+    cd.cls = cls
+    yield eq_, (2, 3, 4, lmax), cd.cls.shape
+    cls = np.resize(cls, (3, lmax, 5))
+    cd.cls = cls
+    yield eq_, (3, lmax, 5), cd.cls.shape
 
 def test_appendcls():
     cd = almmod.ClData(lmax)
-    cls = shaperange((6, lmax,))
-    cd.appendcls(cls)
-    combcls = np.append(np.zeros((6, lmax)), cls)
-    combcls = np.reshape(combcls, (2, 6, lmax))
+    cls = shaperange((1, lmax))
+    cd.appendcls(cls, along_axis=0)
+    combcls = np.append(np.zeros((1, lmax)), cls, axis=0)
     yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (2, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax)
-    cls = shaperange((6, lmax))
-    cd.appendcls(cls)
-    combcls = np.append(np.zeros((6, lmax)), cls)
-    combcls = np.reshape(combcls, (2, 6, lmax))
+    yield eq_, (2, lmax), cd.cls.shape
+    cd = almmod.ClData(lmax, cls=cls)
+    cd.appendcls(cls, along_axis=0)
+    combcls = np.append(cls, cls, axis=0)
     yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (2, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax, lsubd=(3, 2))
-    cls = shaperange((3, 2, 6, lmax))
+    yield eq_, (2, lmax), cd.cls.shape
+    #Default axis should be 0:
+    cd = almmod.ClData(lmax, cls=cls)
     cd.appendcls(cls)
-    cls = cls.reshape((3, 2, 1, 6, lmax))
-    combcls = np.append(np.zeros((3, 2, 1, 6, lmax), dtype=np.complex), cls, 
-                         axis=2)
     yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (3, 2, 2, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax, rsubd=8)
-    cls = shaperange((8, 6, lmax))
-    cd.appendcls(cls)
-    cls = cls.reshape((1, 8, 6, lmax))
-    combcls = np.append(np.zeros((1, 8, 6, lmax), dtype=np.complex), cls, 
-                         axis=0)
-    yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (2, 8, 6, lmax), cd.cls.shape
-    cd = almmod.ClData(lmax, lsubd=3, rsubd=(8, 10))
-    cls = shaperange((3, 8, 10, 6, lmax))
-    cd.appendcls(cls)
-    cls = cls.reshape((3, 1, 8, 10, 6, lmax))
-    cd.appendcls(cls)
-    combcls = np.append(np.zeros((3, 1, 8, 10, 6, lmax)), cls, axis=1)
-    combcls = np.append(combcls, cls, axis=1)
-    yield ok_, np.all(combcls == cd.cls)
-    yield eq_, (3, 3, 8, 10, 6, lmax), cd.cls.shape
-    #Should be possible to append a ClData object as well
-    cd = almmod.ClData(lmax)
-    cd2 = almmod.ClData(lmax)
-    cd.appendcls(cd2)
-    yield eq_, (2, 6, lmax), cd.cls.shape
-    cd2 = almmod.ClData(lmax*2)
+    yield eq_, (2, lmax), cd.cls.shape
+    cls = shaperange((3, 4, lmax, 3, 1))
+    cd = almmod.ClData(lmax, cls=cls)
     def func():
-        cd.appendcls(cd2)
+        cd.appendcls(cls, along_axis=2)
     yield assert_raises, ValueError, func
+    cd.appendcls(cls, along_axis=4)
+    yield eq_, (3, 4, lmax, 3, 2), cd.cls.shape
 
 def test_speccls():
+    pass
     #Default: Should assume that we want all spectras
-    alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
-    telist = ['TT', 'TE', 'EE']
-    cd = almmod.ClData(lmax)
-    yield eq_, cd._nspecs, 6
-    yield eq_, cd.spectra, alllist
-    cd = almmod.ClData(lmax, spectra='all')
-    yield eq_, cd._nspecs, 6
-    yield eq_, cd.spectra, alllist
-    cd = almmod.ClData(lmax, spectra='T-E')
-    yield eq_, cd._nspecs, 3
-    yield eq_, cd.spectra, telist
-    #Once initialised, can only change the name of the spectra, not the number
-    try:
-        cd.spectra = ['TT', 'BB', 'EB']
-    except:
-        raise AssertionError()
-    yield eq_, cd.spectra, ['TT', 'BB', 'EB']
-    def func():
-        cd.spectra = ['TT', 'EB', 'BB', 'TE']
-    yield assert_raises, ValueError, func
-    def func():
-        cd.spectra = [3, 4, 1]
-    yield assert_raises, TypeError, func
-    def func():
-        cd.spectra = ['TT', 'skjera', 'BB']
-    yield assert_raises, ValueError, func
+    #alllist = ['TT', 'TE', 'TB', 'EE', 'EB', 'BB']
+    #telist = ['TT', 'TE', 'EE']
+    #cd = almmod.ClData(lmax)
+    #yield eq_, cd.nspecs, 6
+    #yield eq_, cd.spectra, alllist
+    #cd = almmod.ClData(lmax, spectra='all')
+    #yield eq_, cd.nspecs, 6
+    #yield eq_, cd.spectra, alllist
+    #cd = almmod.ClData(lmax, spectra='T-E')
+    #yield eq_, cd.nspecs, 3
+    #yield eq_, cd.spectra, telist
+    ##Once initialised, can only change the name of the spectra, not the number
+    #try:
+    #    cd.spectra = ['TT', 'BB', 'EB']
+    #except:
+    #    raise AssertionError()
+    #yield eq_, cd.spectra, ['TT', 'BB', 'EB']
+    #def func():
+    #    cd.spectra = ['TT', 'EB', 'BB', 'TE']
+    #yield assert_raises, ValueError, func
+    #def func():
+    #    cd.spectra = [3, 4, 1]
+    #yield assert_raises, TypeError, func
+    #def func():
+    #    cd.spectra = ['TT', 'skjera', 'BB']
+    #yield assert_raises, ValueError, func
