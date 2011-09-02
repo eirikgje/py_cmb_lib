@@ -90,9 +90,7 @@ def determine_type_fits(hdulist):
 
 def write_file(fname, data, bintab=True):
     if fname.endswith('.fits'):
-        #Write fits file
         if isinstance(data, mapmod.MapData):
-            #Write map
             if bintab:
                 if data.nside <= 8:
                     raise NotImplementedError("""Nside must be at least 16 at 
@@ -105,29 +103,27 @@ def write_file(fname, data, bintab=True):
                     pol = True
                     if len(data.map.shape) != 2:
                         raise NotImplementedError()
-                    col1 = pyfits.Column(name='TEMPERATURE', format='1024E', 
-                            array = data.map[(Ellipsis,) * data.polaxis + (0,) 
-                                             + (Ellipsis,) * (data.map.ndim - 1
-                                             - data.polaxis)].reshape(numrows, 
-                                                                      1024))
-                    col2 = pyfits.Column(name='Q-POLARISATION', format='1024E', 
-                            array = data.map[(Ellipsis,) * data.polaxis + (1,) 
-                                             + (Ellipsis,) * (data.map.ndim - 1
-                                             - data.polaxis)].reshape(numrows, 
-                                                                      1024))
-                    col3 = pyfits.Column(name='U-POLARISATION', format='1024E', 
-                            array = data.map[(Ellipsis,) * data.polaxis + (2,) 
-                                             + (Ellipsis,) * (data.map.ndim - 1
-                                             - data.polaxis)].reshape(numrows, 
-                                                                      1024))
-                    cols = pyfits.ColDefs([col1, col2, col3])
+                    cols = []
+                    for i in range(3):
+                        if i == 0:
+                            name = 'TEMPERATURE'
+                        elif i == 1:
+                            name = 'Q-POLARISATION'
+                        elif i == 2:
+                            name = 'U-POLARISATION'
+                        cols.append(pyfits.Column(name=name, format='1024E', 
+                                            array = data.map[(Ellipsis,) * 
+                                            data.polaxis + (i,) + (Ellipsis,) *
+                                            (data.map.ndim - 1 - 
+                                            data.polaxis)].reshape(numrows, 
+                                                                   1024)))
                 else:
                     pol = False
                     if (len(data.map.shape)) != 1:
                         raise NotImplementedError()
-                    col1 = pyfits.Column(name='TEMPERATURE', format='1024E',
-                                        array=data.map.reshape(numrows, 1024))
-                    cols = pyfits.ColDefs([col1])
+                    cols = [pyfits.Column(name='TEMPERATURE', format='1024E',
+                                        array=data.map.reshape(numrows, 1024))]
+                cols = pyfits.ColDefs(cols)
                 prihdu = pyfits.PrimaryHDU()
                 tbhdu = pyfits.new_table(cols)
                 thdr = tbhdu.header
@@ -138,11 +134,55 @@ def write_file(fname, data, bintab=True):
                 thdr.update('POLAR', pol, 'Polarisation included (True/False)')
                 thdr.update('EXTNAME', 'HEALPIX MAP', 'HEALPix map')
                 thdulist = pyfits.HDUList([prihdu, tbhdu])
-                thdulist.writeto(fname)
             else:
                 raise NotImplementedError()
-        elif isinstance(data, mapmod.ClData):
-            #Write Cl file
-            pass
+        elif isinstance(data, almmod.ClData):
+            if bintab:
+                raise NotImplementedError()
+            else:
+                if (data.specaxis is None or (data.cls.shape[data.specaxis] 
+                    == 1 and data.spectra == ['TT'])):
+                    pol = False
+                else:
+                    pol = True
+                if data.cls.ndim == 1 or (data.cls.ndim == 2 
+                        and data.specaxis is not None):
+                    cols = []
+                    for i in range(len(data.spectra)):
+                        if data.spectra[i] == 'TT':
+                            name = 'TEMPERATURE'
+                        elif data.spectra[i] == 'TE':
+                            name = 'G-T'
+                        elif data.spectra[i] == 'EE':
+                            name = 'GRADIENT'
+                        elif data.spectra[i] == 'BB':
+                            name = 'CURL'
+                        elif data.spectra[i] == 'EB':
+                            raise NotImplementedError()
+                        elif data.spectra[i] == 'TB':
+                            raise NotImplementedError()
+                        if data.specaxis is None:
+                            array = data.cls
+                        else:
+                            array = data.cls[(Ellipsis,) * data.specaxis + (i,)
+                                    + (Ellipsis,) * (data.cls.ndim - 1 - 
+                                        data.specaxis)]
+                        cols.append(pyfits.Column(name=name, format = 'E24.15', 
+                                        array = array))
+                    cols = pyfits.ColDefs(cols, tbtype="TableHDU")
+                    prihdu = pyfits.PrimaryHDU()
+                    tbhdu = pyfits.new_table(cols, tbtype='TableHDU')
+                    thdr = tbhdu.header
+                    thdr.update('EXTNAME', 'POWER SPECTRUM', 
+                                'Power spectrum : C(l)')
+                    thdr.update('POLAR', pol,
+                                'Polarisation included (True/False)')
+                    thdr.update('MAX-LPOL', data.lmax, 'Maximum L multipole')
+                    thdulist = pyfits.HDUList([prihdu, tbhdu])
+                else:
+                    raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+        thdulist.writeto(fname)
     else:
         raise NotImplementedError()
