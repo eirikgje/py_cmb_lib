@@ -2,7 +2,6 @@ from __future__ import division
 import mapmod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
-import sys
 
 nside = 32
 npix = 12*nside**2

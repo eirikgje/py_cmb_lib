@@ -74,16 +74,20 @@ def determine_type_fits(hdulist):
                 return 'cls'
             elif exthdr['EXTNAME'].startswith('ANALYSED A_LMS'):
                 return 'alms'
-        if 'NSIDE' in exthdr:
-            if 'MAX-MPOL' in exthdr:
-                return 'alms'
-            else:
-                return 'map'
+            elif exthdr['EXTNAME'] == 'PIXEL WINDOW':
+                return 'cls'
         if 'MAX-LPOL' in exthdr:
             if 'MAX-MPOL' in exthdr:
                 return 'alms'
             else:
                 return 'cls'
+        if 'NSIDE' in exthdr:
+            if 'MAX-MPOL' in exthdr:
+                return 'alms'
+            elif 'MAX-LPOL' in exthdr:
+                return 'cls'
+            else:
+                return 'map'
     else:
         raise NotImplementedError()
     raise TypeError("Cannot determine fits data type")

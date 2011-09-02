@@ -2,7 +2,6 @@ from __future__ import division
 import beammod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
-import sys
 
 def test_gaussbeam():
     beam = beammod.gaussbeam(10.0, 95, ndim=1)
