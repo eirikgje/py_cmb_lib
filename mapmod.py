@@ -220,13 +220,8 @@ def ring2nest(md):
 
     if not _r2n.has_key(md.nside):
         _init_r2n(md.nside)
-    view = []
-    for i in range(md.pixaxis):
-        view.append(Ellipsis)
-    view.append(_r2n[md.nside])
-    for i in range(md.map.ndim-1-md.pixaxis):
-        view.append(Ellipsis)
-    md.map = md.map[view]
+    md.map = md.map[(Ellipsis,) * md.pixaxis + (_r2n[md.nside],) + 
+                    (Ellipsis,) * (md.map.ndim - 1 - md.pixaxis)]
     md.ordering='nested'
 
     return md
@@ -237,14 +232,8 @@ def nest2ring(md):
     if not _n2r.has_key(md.nside):
         _init_n2r(md.nside)
 
-    view = []
-    for i in range(md.pixaxis):
-        view.append(Ellipsis)
-    view.append(_n2r[md.nside])
-    for i in range(md.map.ndim-1-md.pixaxis):
-        view.append(Ellipsis)
-
-    md.map = md.map[view]
+    md.map = md.map[(Ellipsis,) * md.pixaxis + (_n2r[md.nside],) + 
+                    (Ellipsis,) * (md.map.ndim - 1 - md.pixaxis)]
     md.ordering='ring'
     return md
 
