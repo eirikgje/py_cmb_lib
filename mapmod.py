@@ -274,7 +274,7 @@ class MapData(object):
 
     """
     def __init__(self, nside, ordering='ring', map=None, pixaxis=None,
-                 rsubd=None, polaxis=None):
+                 rsubd=None, pol_axis=None):
         if map is not None and pixaxis is not None:
             if map[pixaxis] != 12*nside**2:
                 raise ValueError("""Explicit pixaxis does not contain the right
@@ -290,7 +290,7 @@ class MapData(object):
         self.nside = nside
         self.map = map
         self.ordering = ordering
-        self.polaxis = polaxis
+        self.pol_axis = pol_axis
 
     def getmap(self):
         return self._map
@@ -310,7 +310,7 @@ class MapData(object):
                                     to nside""")
         self._map = map
         #Will raise an error if the new map does not have the correct number of
-        #elements along polaxis
+        #elements along pol_axis
 
     map = property(getmap, setmap)
 
@@ -341,21 +341,21 @@ class MapData(object):
 
     nside = property(getnside, setnside)
 
-    def getpolaxis(self):
-        if self._polaxis is not None:
-            if self.map.shape[self._polaxis] != 3:
+    def getpol_axis(self):
+        if self._pol_axis is not None:
+            if self.map.shape[self._pol_axis] != 3:
                 raise ValueError("""Polarization axis has not been updated since
                                     changing number of map dimensions""")
-        return self._polaxis
+        return self._pol_axis
 
-    def setpolaxis(self, polaxis):
-        if polaxis is not None:
-            if self.map.shape[polaxis] != 3:
-                self._polaxis = None
+    def setpol_axis(self, pol_axis):
+        if pol_axis is not None:
+            if self.map.shape[pol_axis] != 3:
+                self._pol_axis = None
                 raise ValueError("Polarization axis does not have 3 dimensions")
-        self._polaxis = polaxis
+        self._pol_axis = pol_axis
 
-    polaxis = property(getpolaxis, setpolaxis)
+    pol_axis = property(getpol_axis, setpol_axis)
 
     def switchordering(self):
         if self.ordering == 'ring':
@@ -391,8 +391,8 @@ class MapData(object):
 
         if along_axis == self.pixaxis:
             raise ValueError("Cannot append along pixel axis")
-        if self.polaxis is not None:
-            if along_axis == self.polaxis:
+        if self.pol_axis is not None:
+            if along_axis == self.pol_axis:
                 raise ValueError("Cannot append along polarization axis")
 
         self.map = np.append(self.map, map, axis=along_axis)

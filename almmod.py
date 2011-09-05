@@ -15,7 +15,7 @@ def lm2ind(lm):
 
 class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, indaxis=None,
-                 polaxis=None):
+                 pol_axis=None):
         if alms is not None and indaxis is not None:
             if alms[indaxis] != lmax * (lmax + 1) // 2 + lmax + 1:
                 raise ValueError("""Explicit indaxis does not contain right
@@ -32,7 +32,7 @@ class AlmData(object):
         self.lmax = lmax
         self.mmax = lmax
         self.alms = alms
-        self.polaxis = polaxis
+        self.pol_axis = pol_axis
 
     def getalms(self):
         return self._alms
@@ -67,21 +67,21 @@ class AlmData(object):
 
     lmax = property(getlmax, setlmax)
 
-    def getpolaxis(self):
-        if self._polaxis is not None:
-            if self.cls.shape[self._polaxis] != 3:
+    def getpol_axis(self):
+        if self._pol_axis is not None:
+            if self.cls.shape[self._pol_axis] != 3:
                 raise ValueError("""Polarization axis has not been updated since
                                     changing number of map dimensions""")
-        return self._polaxis
+        return self._pol_axis
 
-    def setpolaxis(self, polaxis):
-        if polaxis is not None:
-            if self.alms.shape[polaxis] != 3:
-                self._polaxis = None
+    def setpol_axis(self, pol_axis):
+        if pol_axis is not None:
+            if self.alms.shape[pol_axis] != 3:
+                self._pol_axis = None
                 raise ValueError("Polarization axis does not have 3 dimensions")
-        self._polaxis = polaxis
+        self._pol_axis = pol_axis
 
-    polaxis = property(getpolaxis, setpolaxis)
+    pol_axis = property(getpol_axis, setpol_axis)
 
     def appendalms(self, alms, along_axis=0):
         """Add one or several alms to object instance.
@@ -111,14 +111,14 @@ class AlmData(object):
 
         if along_axis == self.indaxis:
             raise ValueError("Cannot append along index axis")
-        if self.polaxis is not None:
-            if along_axis == self.polaxis:
+        if self.pol_axis is not None:
+            if along_axis == self.pol_axis:
                 raise ValueError("Cannot append along polarization axis")
 
         self.alms = np.append(self.alms, alms, axis=along_axis)
 
 class ClData(object):
-    def __init__(self, lmax, cls=None, spectra='temp', specaxis=None, 
+    def __init__(self, lmax, cls=None, spectra='temp', spec_axis=None, 
                  claxis=None):
         if cls is not None and claxis is not None:
             if cls.shape[claxis] != lmax + 1:
@@ -133,7 +133,7 @@ class ClData(object):
         self._lmax = None
         self.lmax = lmax
         self.cls = cls
-        self.specaxis = specaxis
+        self.spec_axis = spec_axis
 
     def getcls(self):
         return self._cls
@@ -197,22 +197,22 @@ class ClData(object):
 
     spectra = property(getspectra, setspectra)
 
-    def getspecaxis(self):
-        if self._specaxis is not None:
-            if self.cls.shape[self._specaxis] != self.nspecs:
+    def getspec_axis(self):
+        if self._spec_axis is not None:
+            if self.cls.shape[self._spec_axis] != self.nspecs:
                 raise ValueError("""Spectrum axis has not been updated since
                                     changing number of map dimensions""")
-        return self._specaxis
+        return self._spec_axis
 
-    def setspecaxis(self, specaxis):
-        if specaxis is not None:
-            if self.cls.shape[specaxis] != self.nspecs:
-                self._specaxis = None
+    def setspec_axis(self, spec_axis):
+        if spec_axis is not None:
+            if self.cls.shape[spec_axis] != self.nspecs:
+                self._spec_axis = None
                 raise ValueError("""Spectrum axis does not have the right
                                     number of dimensions""")
-        self._specaxis = specaxis
+        self._spec_axis = spec_axis
 
-    specaxis = property(getspecaxis, setspecaxis)
+    spec_axis = property(getspec_axis, setspec_axis)
 
     def appendcls(self, cls, along_axis=0):
         """Add one or several cls to object instance.
@@ -235,8 +235,8 @@ class ClData(object):
         elif cls.ndim == self.cls.ndim + 1:
             self.cls = self.cls.reshape(self.cls.shape[0:along_axis] + (1,) +
                                         self.cls.shape[along_axis:])
-            if self.specaxis is not None:
-                self.specaxis += 1
+            if self.spec_axis is not None:
+                self.spec_axis += 1
         elif cls.ndim == self.cls.ndim - 1:
             cls = cls.reshape(cls.shape[0:along_axis] + (1,) + 
                               cls.shape[along_axis:])
@@ -245,8 +245,8 @@ class ClData(object):
 
         if along_axis == self.claxis:
             raise ValueError("Cannot append along pixel axis")
-        if self.specaxis is not None:
-            if along_axis == self.specaxis:
+        if self.spec_axis is not None:
+            if along_axis == self.spec_axis:
                 raise ValueError("Cannot append along spectrum axis")
 
         self.cls = np.append(self.cls, cls, axis=along_axis)
