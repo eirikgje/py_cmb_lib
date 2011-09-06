@@ -175,18 +175,18 @@ def test_shape():
 def test_pol():
     #Testing the polarization feature
     def func():
-        md = mapmod.MapData(nside, polaxis=0)
+        md = mapmod.MapData(nside, pol_axis=0)
     yield assert_raises, ValueError, func
     map=np.zeros((3, npix))
     def func():
-        md = mapmod.MapData(nside, map=map, polaxis=1)
+        md = mapmod.MapData(nside, map=map, pol_axis=1)
     yield assert_raises, ValueError, func
     try:
-        md = mapmod.MapData(nside, map=map, polaxis=0)
+        md = mapmod.MapData(nside, map=map, pol_axis=0)
     except:
         raise AssertionError()
     md = mapmod.MapData(nside)
-    yield eq_, md.polaxis, None
+    yield eq_, md.pol_axis, None
 
 def test_degrade():
     nside = 4

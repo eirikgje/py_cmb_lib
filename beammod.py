@@ -23,5 +23,5 @@ def gaussbeam(fwhm, lmax, ndim=1):
         spectra = 'temp'
     else:
         raise NotImplementedError()
-    beam = almmod.ClData(lmax, cls=gout, spectra=spectra, specaxis=1)
+    beam = almmod.ClData(lmax, cls=gout, spectra=spectra, spec_axis=1)
     return beam

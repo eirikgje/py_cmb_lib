@@ -146,13 +146,13 @@ def write_file(fname, data, bintab=True):
             if bintab:
                 raise NotImplementedError()
             else:
-                if (data.specaxis is None or (data.cls.shape[data.specaxis] 
+                if (data.spec_axis is None or (data.cls.shape[data.spec_axis] 
                     == 1 and data.spectra == ['TT'])):
                     pol = False
                 else:
                     pol = True
                 if data.cls.ndim == 1 or (data.cls.ndim == 2 
-                        and data.specaxis is not None):
+                        and data.spec_axis is not None):
                     cols = []
                     for i in range(len(data.spectra)):
                         if data.spectra[i] == 'TT':
@@ -167,12 +167,12 @@ def write_file(fname, data, bintab=True):
                             raise NotImplementedError()
                         elif data.spectra[i] == 'TB':
                             raise NotImplementedError()
-                        if data.specaxis is None:
+                        if data.spec_axis is None:
                             array = data.cls
                         else:
-                            array = data.cls[(Ellipsis,) * data.specaxis + (i,)
+                            array = data.cls[(Ellipsis,) * data.spec_axis + (i,)
                                     + (Ellipsis,) * (data.cls.ndim - 1 - 
-                                        data.specaxis)]
+                                        data.spec_axis)]
                         cols.append(pyfits.Column(name=name, format = 'E24.15', 
                                         array = array))
                     cols = pyfits.ColDefs(cols, tbtype="TableHDU")

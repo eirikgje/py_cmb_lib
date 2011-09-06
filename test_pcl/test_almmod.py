@@ -89,18 +89,18 @@ def test_shape():
 def test_pol():
     #Testing the polarization feature
     def func():
-        ad = almmod.AlmData(lmax, polaxis=0)
+        ad = almmod.AlmData(lmax, pol_axis=0)
     yield assert_raises, ValueError, func
     alms=np.zeros((3, nels), dtype=np.complex)
     def func():
-        ad = almmod.AlmData(lmax, alms=alms, polaxis=1)
+        ad = almmod.AlmData(lmax, alms=alms, pol_axis=1)
     yield assert_raises, ValueError, func
     try:
-        ad = almmod.AlmData(lmax, alms=alms, polaxis=0)
+        ad = almmod.AlmData(lmax, alms=alms, pol_axis=0)
     except:
         raise AssertionError()
     ad = almmod.AlmData(lmax)
-    yield eq_, ad.polaxis, None
+    yield eq_, ad.pol_axis, None
 
 def test_appendalms():
     ad = almmod.AlmData(lmax)
@@ -227,42 +227,42 @@ def test_speccls():
     cd = almmod.ClData(lmax)
     yield eq_, cd.nspecs, 1
     yield eq_, cd.spectra, templist
-    yield eq_, cd.specaxis, None
+    yield eq_, cd.spec_axis, None
     cd = almmod.ClData(lmax, spectra='all')
     yield eq_, cd.nspecs, 6
     yield eq_, cd.spectra, alllist
-    yield eq_, cd.specaxis, None
+    yield eq_, cd.spec_axis, None
     cd = almmod.ClData(lmax, spectra='T-E')
     yield eq_, cd.nspecs, 3
     yield eq_, cd.spectra, telist
-    yield eq_, cd.specaxis, None
+    yield eq_, cd.spec_axis, None
     try:
         cd = almmod.ClData(lmax, spectra=['TT', 'BB', 'EB'])
     except:
         raise AssertionError
-    #When setting specaxis, the cl dimension must agree
+    #When setting spec_axis, the cl dimension must agree
     cls = shaperange((lmax + 1,))
     cd = almmod.ClData(lmax, spectra='temp')
     def func():
-        cd.specaxis = 0
+        cd.spec_axis = 0
     yield assert_raises, ValueError, func
     cd = almmod.ClData(lmax, spectra='temp')
     cd.cls = shaperange((1, lmax + 1))
     try:
-        cd.specaxis = 0
+        cd.spec_axis = 0
     except:
         raise AssertionError
-    #Should be possible to change the cls later - i.e. specaxis should not be
+    #Should be possible to change the cls later - i.e. spec_axis should not be
     #imposing anything
     try:
         cd.cls = shaperange((4, 5, lmax + 1)) 
     except:
         raise AssertionError
     def func():
-        cd.specaxis = 1
+        cd.spec_axis = 1
     yield assert_raises, ValueError, func
     cd.spectra = ['TT', 'TE', 'EE', 'EB', 'BB']
     try:
-        cd.specaxis = 1
+        cd.spec_axis = 1
     except:
         raise AssertionError
