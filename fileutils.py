@@ -26,7 +26,7 @@ def read_file(fname, type=None):
                 if hdr['polar']:
                     for i in range(3):
                         objdata.map[i] = data.field(i).flatten()
-                    objdata.polaxis = 0
+                    objdata.pol_axis = 0
                 else:
                     objdata.map = data.field(i).flatten()
             else:
@@ -40,11 +40,13 @@ def read_file(fname, type=None):
                 mmax = hdr['max-mpol']
                 if hdr['polar']:
                     shape = (3, lmax * (lmax + 1) // 2 + lmax + 1)
+                    pol_axis = 0
                 else:
                     raise NotImplementedError()
                     shape = (lmax * (lmax + 1) // 2 + lmax + 1,)
+                    pol_axis = None
                 objdata = almmod.AlmData(lmax, alms = np.zeros(shape, 
-                                         dtype=np.complex))
+                                         dtype=np.complex), pol_axis=pol_axis)
                 if hdr['polar']:
                     for i in range(1, 4):
                         real = hdulist[i].data.field('REAL')
@@ -103,7 +105,7 @@ def write_file(fname, data, bintab=True):
                 if npix % 1024 != 0:
                     raise NotImplementedError("npix must be a multiple of 1024")
                 numrows = npix // 1024
-                if data.polaxis is not None:
+                if data.pol_axis is not None:
                     pol = True
                     if len(data.map.shape) != 2:
                         raise NotImplementedError()
@@ -117,9 +119,9 @@ def write_file(fname, data, bintab=True):
                             name = 'U-POLARISATION'
                         cols.append(pyfits.Column(name=name, format='1024E', 
                                             array = data.map[(Ellipsis,) * 
-                                            data.polaxis + (i,) + (Ellipsis,) *
+                                            data.pol_axis + (i,) + (Ellipsis,) *
                                             (data.map.ndim - 1 - 
-                                            data.polaxis)].reshape(numrows, 
+                                            data.pol_axis)].reshape(numrows, 
                                                                    1024)))
                 else:
                     pol = False

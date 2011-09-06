@@ -69,7 +69,7 @@ class AlmData(object):
 
     def getpol_axis(self):
         if self._pol_axis is not None:
-            if self.cls.shape[self._pol_axis] != 3:
+            if self.alms.shape[self._pol_axis] != 3:
                 raise ValueError("""Polarization axis has not been updated since
                                     changing number of map dimensions""")
         return self._pol_axis
