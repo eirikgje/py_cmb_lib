@@ -200,12 +200,12 @@ def degrade_average(md, nside_n):
         md.switchordering()
 
     redfact = (md.nside // nside_n) ** 2
-    temp = np.reshape(md.map, md.map.shape[:md.pixaxis] + 
+    temp = np.reshape(md.map, md.map.shape[:md.pix_axis] + 
                       (12*nside_n*nside_n, redfact) + 
-                      md.map.shape[md.pixaxis + 1:])
+                      md.map.shape[md.pix_axis + 1:])
     #nmap = MapData(nside_n, ordering='nested')
     md._nside = nside_n
-    md.map = np.average(temp, axis=md.pixaxis + 1)
+    md.map = np.average(temp, axis=md.pix_axis + 1)
     if switched: md.switchordering()
     return md
 
@@ -220,8 +220,8 @@ def ring2nest(md):
 
     if not _r2n.has_key(md.nside):
         _init_r2n(md.nside)
-    md.map = md.map[(Ellipsis,) * md.pixaxis + (_r2n[md.nside],) + 
-                    (Ellipsis,) * (md.map.ndim - 1 - md.pixaxis)]
+    md.map = md.map[(Ellipsis,) * md.pix_axis + (_r2n[md.nside],) + 
+                    (Ellipsis,) * (md.map.ndim - 1 - md.pix_axis)]
     md.ordering='nested'
 
     return md
@@ -232,8 +232,8 @@ def nest2ring(md):
     if not _n2r.has_key(md.nside):
         _init_n2r(md.nside)
 
-    md.map = md.map[(Ellipsis,) * md.pixaxis + (_n2r[md.nside],) + 
-                    (Ellipsis,) * (md.map.ndim - 1 - md.pixaxis)]
+    md.map = md.map[(Ellipsis,) * md.pix_axis + (_n2r[md.nside],) + 
+                    (Ellipsis,) * (md.map.ndim - 1 - md.pix_axis)]
     md.ordering='ring'
     return md
 
@@ -273,15 +273,15 @@ class MapData(object):
     for a map will be practically immutable after construction.
 
     """
-    def __init__(self, nside, ordering='ring', map=None, pixaxis=None,
+    def __init__(self, nside, ordering='ring', map=None, pix_axis=None,
                  rsubd=None, pol_axis=None):
-        if map is not None and pixaxis is not None:
-            if map[pixaxis] != 12*nside**2:
-                raise ValueError("""Explicit pixaxis does not contain the right
+        if map is not None and pix_axis is not None:
+            if map[pix_axis] != 12*nside**2:
+                raise ValueError("""Explicit pix_axis does not contain the right
                                     number of pixels""")
-        if pixaxis is None:
-            pixaxis = 0
-        self.pixaxis = pixaxis
+        if pix_axis is None:
+            pix_axis = 0
+        self.pix_axis = pix_axis
         self._nside = None
         if map is None:
             if not isinstance(nside, int):
@@ -298,12 +298,12 @@ class MapData(object):
     def setmap(self, map):
         if not isinstance(map, np.ndarray):
             raise TypeError("Map must be numpy array")
-        if (self.pixaxis >= map.ndim or 
-                map.shape[self.pixaxis] != 12*self.nside**2):
+        if (self.pix_axis >= map.ndim or 
+                map.shape[self.pix_axis] != 12*self.nside**2):
             #Try to autodetect pixel axis
             for i in range(map.ndim):
                 if map.shape[i] == 12*self.nside**2:
-                    self.pixaxis = i
+                    self.pix_axis = i
                     break
             else:
                 raise ValueError("""Pixel number of input map does not conform 
@@ -389,7 +389,7 @@ class MapData(object):
         else:
             raise ValueError("Incompatible number of dimensions between maps")
 
-        if along_axis == self.pixaxis:
+        if along_axis == self.pix_axis:
             raise ValueError("Cannot append along pixel axis")
         if self.pol_axis is not None:
             if along_axis == self.pol_axis:

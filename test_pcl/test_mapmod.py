@@ -119,7 +119,7 @@ def test_init():
     yield eq_, (3, 7, npix), md.map.shape
     map = shaperange((3, npix, 5))
     def func():
-        md = mapmod.MapData(nside, map=map, pixaxis=0)
+        md = mapmod.MapData(nside, map=map, pix_axis=0)
     yield assert_raises, ValueError, func
 
 def test_assign():
@@ -163,14 +163,14 @@ def test_shape():
     yield eq_, (npix,), md.map.shape
     md.map = np.zeros((4, npix, 5, 6))
     yield eq_, (4, npix, 5, 6), md.map.shape
-    yield eq_, 1, md.pixaxis
+    yield eq_, 1, md.pix_axis
     md.map = np.zeros((4, 5, 6, npix))
     yield eq_, (4, 5, 6, npix), md.map.shape
-    yield eq_, 3, md.pixaxis
+    yield eq_, 3, md.pix_axis
     map = np.resize(map, (3, npix, 5))
     md.map = map
     yield eq_, (3, npix, 5), md.map.shape
-    yield eq_, 1, md.pixaxis
+    yield eq_, 1, md.pix_axis
 
 def test_pol():
     #Testing the polarization feature
@@ -241,3 +241,6 @@ def test_appendmaps():
     yield assert_raises, ValueError, func
     md.appendmaps(map, along_axis=4)
     yield eq_, (3, 4, npix, 3, 2), md.map.shape
+
+#def test_iter():
+    #Should iterate through the maps along pix_axis

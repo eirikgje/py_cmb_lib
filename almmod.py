@@ -14,15 +14,15 @@ def lm2ind(lm):
     return lm[0] * (lm[0] + 1) // 2 + lm[1]
 
 class AlmData(object):
-    def __init__(self, lmax, mmax=None, alms=None, indaxis=None,
+    def __init__(self, lmax, mmax=None, alms=None, ind_axis=None,
                  pol_axis=None):
-        if alms is not None and indaxis is not None:
-            if alms[indaxis] != lmax * (lmax + 1) // 2 + lmax + 1:
-                raise ValueError("""Explicit indaxis does not contain right
+        if alms is not None and ind_axis is not None:
+            if alms[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
+                raise ValueError("""Explicit ind_axis does not contain right
                                     number of elements""")
-        if indaxis is None:
-            indaxis = 0
-        self.indaxis = indaxis
+        if ind_axis is None:
+            ind_axis = 0
+        self.ind_axis = ind_axis
         self._lmax = None
         if mmax != None:
             raise NotImplementedError()
@@ -42,11 +42,11 @@ class AlmData(object):
             raise TypeError("Alms must be numpy array")
         if not alms.dtype == np.complex:
             raise TypeError("Alms must be complex")
-        if self.indaxis >= alms.ndim or alms.shape[self.indaxis] != self.nnind:
+        if self.ind_axis >= alms.ndim or alms.shape[self.ind_axis] != self.nnind:
             #Try to autodetect pixel axis
             for i in range(alms.ndim):
                 if alms.shape[i] == self.nnind:
-                    self.indaxis = i
+                    self.ind_axis = i
                     break
             else:
                 raise ValueError("""Index number of input alms does not conform 
@@ -109,7 +109,7 @@ class AlmData(object):
         else:
             raise ValueError("Incompatible number of dimensions between alms")
 
-        if along_axis == self.indaxis:
+        if along_axis == self.ind_axis:
             raise ValueError("Cannot append along index axis")
         if self.pol_axis is not None:
             if along_axis == self.pol_axis:
