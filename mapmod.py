@@ -292,6 +292,16 @@ class MapData(object):
         self.ordering = ordering
         self.pol_axis = pol_axis
 
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self._currmap == 0:
+            raise StopIteration()
+        self.map[self._currind[:self.pix_axis] + [Ellipsis,] 
+                        + self._currind[self.pix_axis:]]
+        trace_ind = self.map.ndim - 2
+
     def getmap(self):
         return self._map
 
@@ -308,9 +318,14 @@ class MapData(object):
             else:
                 raise ValueError("""Pixel number of input map does not conform 
                                     to nside""")
+        #For iterator - reset every time map is assigned 
+        self._currmap = 1
+        for i in range(map.shape):
+            if i != self.pix_axis:
+                self._currmap *= map.shape[i]
+        #TODO: HERE
+        self._currind = map.shape[:self.pix_axis] 
         self._map = map
-        #Will raise an error if the new map does not have the correct number of
-        #elements along pol_axis
 
     map = property(getmap, setmap)
 

@@ -242,5 +242,16 @@ def test_appendmaps():
     md.appendmaps(map, along_axis=4)
     yield eq_, (3, 4, npix, 3, 2), md.map.shape
 
-#def test_iter():
+def test_iter():
     #Should iterate through the maps along pix_axis
+    map = shaperange((3, 4, npix, 3))
+    md = mapmod.MapData(nside, map=map)
+    currind = [0, 0, 0]
+    indlist = [3, 4, 3]
+    for cmap in md:
+        yield ok_, np.all(map[currind[:3] + [Ellipsis,] + currind[3:]] == cmap)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] and trace_ind != 0:
+            currind[trace_ind] = 0
+            traceind -= 1
+        currind[trace_ind] += 1

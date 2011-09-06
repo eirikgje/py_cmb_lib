@@ -22,8 +22,8 @@ def alm2map(ad, nside):
             for m in range(ad.mmax + 1):
                 convalms[0, l, m] = curralms[almmod.lm2ind([l, m])]
         lib.alm2map_sc_d(nside, ad.lmax, ad.mmax, convalms, 
-                    md.map[currind[:md.pix_axis] 
-                + [Ellipsis,] + currind[md.pix_axis:]]) 
+                            md.map[currind[:md.pix_axis] 
+                            + [Ellipsis,] + currind[md.pix_axis:]]) 
         traceind = ndims - 1
         while indlist[traceind] == currind[traceind] and traceind != 0:
             currind[traceind] = 0
