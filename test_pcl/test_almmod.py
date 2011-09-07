@@ -280,6 +280,19 @@ def test_iter():
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
+    alms = np.arange(nels, dtype=complex)
+    md = almmod.AlmData(lmax, alms=alms)
+    for calms in md:
+        yield ok_, np.all(calms == alms)
+    alms = shaperange_cplx((3, nels))
+    md = almmod.AlmData(lmax, alms=alms)
+    currind = 0
+    indlist = 3
+    for calms in md:
+        yield ok_, np.all(alms[[currind,] + [Ellipsis,]] == calms)
+        yield ok_, calms.shape == (nels,)
+        currind += 1
+
 
 def test_iter_cls():
     cls = shaperange((3, 4, lmax + 1, 3))
@@ -294,3 +307,16 @@ def test_iter_cls():
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
+    cls = np.arange(lmax+1, dtype=float)
+    md = almmod.ClData(lmax, cls=cls)
+    for ccls in md:
+        yield ok_, np.all(ccls == cls)
+    cls = shaperange((3, lmax+1))
+    md = almmod.ClData(lmax, cls=cls)
+    currind = 0
+    indlist = 3
+    for ccls in md:
+        yield ok_, np.all(cls[[currind,] + [Ellipsis,]] == ccls)
+        yield ok_, ccls.shape == (lmax+1,)
+        currind += 1
+

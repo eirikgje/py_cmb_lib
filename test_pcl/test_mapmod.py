@@ -256,3 +256,16 @@ def test_iter():
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
+    map = np.arange(npix, dtype=float)
+    md = mapmod.MapData(nside, map=map)
+    for cmap in md:
+        yield ok_, np.all(cmap == map)
+    map = shaperange((3, npix))
+    md = mapmod.MapData(nside, map=map)
+    currind = 0
+    indlist = 3
+    for cmap in md:
+        yield ok_, np.all(map[[currind,] + [Ellipsis,]] == cmap)
+        yield ok_, cmap.shape == (npix,)
+        currind += 1
+

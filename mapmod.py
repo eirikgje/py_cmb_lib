@@ -293,23 +293,28 @@ class MapData(object):
         self.pol_axis = pol_axis
 
     def __iter__(self):
-        return self
-
-    def next(self):
-        if self._currmap == 0:
-            raise StopIteration()
-        trace_ind = self.map.ndim - 2
-        if self._currind == self._subshape:
-            #First iteration
-            self._currind = list(np.zeros(len(self._subshape), dtype=int))
-        else:
-            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
-                self._currind[trace_ind] = 0
-                trace_ind -= 1
-            self._currind[trace_ind] += 1
-        self._currmap -= 1
-        return self.map[self._currind[:self.pix_axis] + [Ellipsis,] 
-                        + self._currind[self.pix_axis:]]
+        return _map_iter(self)
+#
+#    def next(self):
+#        if self._currmap == 0:
+#            #Reset iteration variables and stop iteration
+#            self._currmap = 1
+#            for dim in self._subshape:
+#                self._currmap *= dim
+#            self._currind = list(self._subshape)
+#            raise StopIteration()
+#        trace_ind = self.map.ndim - 2
+#        if self._currind == self._subshape:
+#            #First iteration
+#            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+#        else:
+#            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+#                self._currind[trace_ind] = 0
+#                trace_ind -= 1
+#            self._currind[trace_ind] += 1
+#        self._currmap -= 1
+#        return self.map[self._currind[:self.pix_axis] + [Ellipsis,] 
+#                        + self._currind[self.pix_axis:]]
 
     def getmap(self):
         return self._map
@@ -328,13 +333,13 @@ class MapData(object):
                 raise ValueError("""Pixel number of input map does not conform 
                                     to nside""")
         #For iterator - reset every time map is assigned 
-        self._currmap = 1
-        self._subshape = list(map.shape[:self.pix_axis] + 
-                            map.shape[self.pix_axis + 1:])
-        for dim in self._subshape:
-            self._currmap *= dim
-        #Copies subshape
-        self._currind = list(self._subshape)
+#        self._currmap = 1
+#        self._subshape = list(map.shape[:self.pix_axis] + 
+#                            map.shape[self.pix_axis + 1:])
+#        for dim in self._subshape:
+#            self._currmap *= dim
+#        #Copies subshape
+#        self._currind = list(self._subshape)
         self._map = map
 
     map = property(getmap, setmap)
@@ -421,3 +426,33 @@ class MapData(object):
                 raise ValueError("Cannot append along polarization axis")
 
         self.map = np.append(self.map, map, axis=along_axis)
+
+class _map_iter(object):
+    def __init__(self, md):
+        if not isinstance(md, MapData):
+            raise TypeError()
+        self._currmap = 1
+        self._subshape = list(md.map.shape[:md.pix_axis] + 
+                            md.map.shape[md.pix_axis + 1:])
+        for dim in self._subshape:
+            self._currmap *= dim
+        self._map = md.map
+        self._pix_axis = md.pix_axis
+        #Copies subshape
+        self._currind = list(self._subshape)
+
+    def next(self):
+        if self._currmap == 0:
+            raise StopIteration()
+        trace_ind = self._map.ndim - 2
+        if self._currind == self._subshape:
+            #First iteration
+            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+        else:
+            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+                self._currind[trace_ind] = 0
+                trace_ind -= 1
+            self._currind[trace_ind] += 1
+        self._currmap -= 1
+        return self._map[self._currind[:self._pix_axis] + [Ellipsis,] 
+                        + self._currind[self._pix_axis:]]

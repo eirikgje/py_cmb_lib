@@ -39,6 +39,12 @@ class AlmData(object):
 
     def next(self):
         if self._curralms == 0:
+            #Reset iteration variables and stop iteration
+            self._curralms = 1
+            for dim in self._subshape:
+                self._curralms *= dim
+            self._currind = list(self._subshape)
+
             raise StopIteration()
         trace_ind = self.alms.ndim - 2
         if self._currind == self._subshape:
@@ -168,6 +174,11 @@ class ClData(object):
 
     def next(self):
         if self._currcls == 0:
+            #Reset iteration variables and stop iteration
+            self._currcls = 1
+            for dim in self._subshape:
+                self._currcls *= dim
+            self._currind = list(self._subshape)
             raise StopIteration()
         trace_ind = self.cls.ndim - 2
         if self._currind == self._subshape:
