@@ -266,3 +266,31 @@ def test_speccls():
         cd.spec_axis = 1
     except:
         raise AssertionError
+
+def test_iter():
+    alms = shaperange_cplx((3, 4, nels, 3))
+    ad = almmod.AlmData(lmax, alms=alms)
+    currind = [0, 0, 0]
+    indlist = [3, 4, 3]
+    for calms in ad:
+        yield ok_, np.all(alms[currind[:2] + [Ellipsis,] + currind[2:]] == calms)
+        yield ok_, calms.shape == (nels,)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
+
+def test_iter_cls():
+    cls = shaperange((3, 4, lmax + 1, 3))
+    cd = almmod.ClData(lmax, cls=cls)
+    currind = [0, 0, 0]
+    indlist = [3, 4, 3]
+    for ccls in cd:
+        yield ok_, np.all(cls[currind[:2] + [Ellipsis,] + currind[2:]] == ccls)
+        yield ok_, ccls.shape == (lmax + 1,)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1

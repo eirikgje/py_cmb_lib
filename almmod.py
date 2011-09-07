@@ -34,6 +34,25 @@ class AlmData(object):
         self.alms = alms
         self.pol_axis = pol_axis
 
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self._curralms == 0:
+            raise StopIteration()
+        trace_ind = self.alms.ndim - 2
+        if self._currind == self._subshape:
+            #First iteration
+            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+        else:
+            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+                self._currind[trace_ind] = 0
+                trace_ind -= 1
+            self._currind[trace_ind] += 1
+        self._curralms -= 1
+        return self.alms[self._currind[:self.ind_axis] + [Ellipsis,] 
+                        + self._currind[self.ind_axis:]]
+
     def getalms(self):
         return self._alms
 
@@ -51,6 +70,15 @@ class AlmData(object):
             else:
                 raise ValueError("""Index number of input alms does not conform 
                                     to lmax""")
+        #For iterator - reset every time alms is assigned 
+        self._curralms = 1
+        self._subshape = list(alms.shape[:self.ind_axis] + 
+                            alms.shape[self.ind_axis + 1:])
+        for dim in self._subshape:
+            self._curralms *= dim
+        #Copies subshape
+        self._currind = list(self._subshape)
+
         self._alms = alms
 
     alms = property(getalms, setalms)
@@ -71,7 +99,7 @@ class AlmData(object):
         if self._pol_axis is not None:
             if self.alms.shape[self._pol_axis] != 3:
                 raise ValueError("""Polarization axis has not been updated since
-                                    changing number of map dimensions""")
+                                    changing number of alm dimensions""")
         return self._pol_axis
 
     def setpol_axis(self, pol_axis):
@@ -119,14 +147,14 @@ class AlmData(object):
 
 class ClData(object):
     def __init__(self, lmax, cls=None, spectra='temp', spec_axis=None, 
-                 claxis=None):
-        if cls is not None and claxis is not None:
-            if cls.shape[claxis] != lmax + 1:
-                raise ValueError("""Explicit claxis does not contain the right
+                 cl_axis=None):
+        if cls is not None and cl_axis is not None:
+            if cls.shape[cl_axis] != lmax + 1:
+                raise ValueError("""Explicit cl_axis does not contain the right
                                     number of elements""")
-        if claxis is None:
-            claxis = 0
-        self.claxis = claxis
+        if cl_axis is None:
+            cl_axis = 0
+        self.cl_axis = cl_axis
         self.spectra = spectra
         if cls is None:
             cls = np.zeros(lmax + 1)
@@ -135,21 +163,49 @@ class ClData(object):
         self.cls = cls
         self.spec_axis = spec_axis
 
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self._currcls == 0:
+            raise StopIteration()
+        trace_ind = self.cls.ndim - 2
+        if self._currind == self._subshape:
+            #First iteration
+            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+        else:
+            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+                self._currind[trace_ind] = 0
+                trace_ind -= 1
+            self._currind[trace_ind] += 1
+        self._currcls -= 1
+        return self.cls[self._currind[:self.cl_axis] + [Ellipsis,] 
+                        + self._currind[self.cl_axis:]]
+
     def getcls(self):
         return self._cls
 
     def setcls(self, cls):
         if not isinstance(cls, np.ndarray):
             raise TypeError("Cls must be numpy array")
-        if self.claxis >= cls.ndim or cls.shape[self.claxis] != self.lmax + 1:
+        if self.cl_axis >= cls.ndim or cls.shape[self.cl_axis] != self.lmax + 1:
             #Try to autodetect cl-axis
             for i in range(cls.ndim):
                 if cls.shape[i] == self.lmax + 1:
-                    self.claxis = i
+                    self.cl_axis = i
                     break
             else:
                 raise ValueError("""Index number of input cls does not conform 
                                     to lmax""")
+        #For iterator - reset every time cls is assigned 
+        self._currcls = 1
+        self._subshape = list(cls.shape[:self.cl_axis] + 
+                            cls.shape[self.cl_axis + 1:])
+        for dim in self._subshape:
+            self._currcls *= dim
+        #Copies subshape
+        self._currind = list(self._subshape)
+
         self._cls = cls
 
     cls = property(getcls, setcls)
@@ -201,7 +257,7 @@ class ClData(object):
         if self._spec_axis is not None:
             if self.cls.shape[self._spec_axis] != self.nspecs:
                 raise ValueError("""Spectrum axis has not been updated since
-                                    changing number of map dimensions""")
+                                    changing number of alm dimensions""")
         return self._spec_axis
 
     def setspec_axis(self, spec_axis):
@@ -243,7 +299,7 @@ class ClData(object):
         else:
             raise ValueError("Incompatible number of dimensions between cls")
 
-        if along_axis == self.claxis:
+        if along_axis == self.cl_axis:
             raise ValueError("Cannot append along pixel axis")
         if self.spec_axis is not None:
             if along_axis == self.spec_axis:
