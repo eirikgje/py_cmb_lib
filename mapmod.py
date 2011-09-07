@@ -298,9 +298,18 @@ class MapData(object):
     def next(self):
         if self._currmap == 0:
             raise StopIteration()
-        self.map[self._currind[:self.pix_axis] + [Ellipsis,] 
-                        + self._currind[self.pix_axis:]]
         trace_ind = self.map.ndim - 2
+        if self._currind == self._subshape:
+            #First iteration
+            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+        else:
+            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+                self._currind[trace_ind] = 0
+                trace_ind -= 1
+            self._currind[trace_ind] += 1
+        self._currmap -= 1
+        return self.map[self._currind[:self.pix_axis] + [Ellipsis,] 
+                        + self._currind[self.pix_axis:]]
 
     def getmap(self):
         return self._map
@@ -320,11 +329,12 @@ class MapData(object):
                                     to nside""")
         #For iterator - reset every time map is assigned 
         self._currmap = 1
-        for i in range(map.shape):
-            if i != self.pix_axis:
-                self._currmap *= map.shape[i]
-        #TODO: HERE
-        self._currind = map.shape[:self.pix_axis] 
+        self._subshape = list(map.shape[:self.pix_axis] + 
+                            map.shape[self.pix_axis + 1:])
+        for dim in self._subshape:
+            self._currmap *= dim
+        #Copies subshape
+        self._currind = list(self._subshape)
         self._map = map
 
     map = property(getmap, setmap)
