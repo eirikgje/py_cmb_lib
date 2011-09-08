@@ -45,7 +45,8 @@ class AlmData(object):
             raise TypeError("Alms must be numpy array")
         if not alms.dtype == np.complex:
             raise TypeError("Alms must be complex")
-        if self.ind_axis >= alms.ndim or alms.shape[self.ind_axis] != self.nnind:
+        if (self.ind_axis >= alms.ndim 
+                or alms.shape[self.ind_axis] != self.nnind):
             #Try to autodetect pixel axis
             for i in range(alms.ndim):
                 if alms.shape[i] == self.nnind:
