@@ -35,29 +35,7 @@ class AlmData(object):
         self.pol_axis = pol_axis
 
     def __iter__(self):
-        return self
-
-    def next(self):
-        if self._curralms == 0:
-            #Reset iteration variables and stop iteration
-            self._curralms = 1
-            for dim in self._subshape:
-                self._curralms *= dim
-            self._currind = list(self._subshape)
-
-            raise StopIteration()
-        trace_ind = self.alms.ndim - 2
-        if self._currind == self._subshape:
-            #First iteration
-            self._currind = list(np.zeros(len(self._subshape), dtype=int))
-        else:
-            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
-                self._currind[trace_ind] = 0
-                trace_ind -= 1
-            self._currind[trace_ind] += 1
-        self._curralms -= 1
-        return self.alms[self._currind[:self.ind_axis] + [Ellipsis,] 
-                        + self._currind[self.ind_axis:]]
+        return _alms_iter(self)
 
     def getalms(self):
         return self._alms
@@ -76,15 +54,6 @@ class AlmData(object):
             else:
                 raise ValueError("""Index number of input alms does not conform 
                                     to lmax""")
-        #For iterator - reset every time alms is assigned 
-        self._curralms = 1
-        self._subshape = list(alms.shape[:self.ind_axis] + 
-                            alms.shape[self.ind_axis + 1:])
-        for dim in self._subshape:
-            self._curralms *= dim
-        #Copies subshape
-        self._currind = list(self._subshape)
-
         self._alms = alms
 
     alms = property(getalms, setalms)
@@ -151,6 +120,36 @@ class AlmData(object):
 
         self.alms = np.append(self.alms, alms, axis=along_axis)
 
+class _alms_iter(object):
+    def __init__(self, ad):
+        if not isinstance(ad, AlmData):
+            raise TypeError()
+        self._curralms = 1
+        self._subshape = list(ad.alms.shape[:ad.ind_axis] + 
+                            ad.alms.shape[ad.ind_axis + 1:])
+        for dim in self._subshape:
+            self._curralms *= dim
+        self._alms = ad.alms
+        self._ind_axis = ad.ind_axis
+        #Copies subshape
+        self._currind = list(self._subshape)
+
+    def next(self):
+        if self._curralms == 0:
+            raise StopIteration()
+        trace_ind = self._alms.ndim - 2
+        if self._currind == self._subshape:
+            #First iteration
+            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+        else:
+            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+                self._currind[trace_ind] = 0
+                trace_ind -= 1
+            self._currind[trace_ind] += 1
+        self._curralms -= 1
+        return self._alms[self._currind[:self._ind_axis] + [Ellipsis,] 
+                        + self._currind[self._ind_axis:]]
+
 class ClData(object):
     def __init__(self, lmax, cls=None, spectra='temp', spec_axis=None, 
                  cl_axis=None):
@@ -170,28 +169,7 @@ class ClData(object):
         self.spec_axis = spec_axis
 
     def __iter__(self):
-        return self
-
-    def next(self):
-        if self._currcls == 0:
-            #Reset iteration variables and stop iteration
-            self._currcls = 1
-            for dim in self._subshape:
-                self._currcls *= dim
-            self._currind = list(self._subshape)
-            raise StopIteration()
-        trace_ind = self.cls.ndim - 2
-        if self._currind == self._subshape:
-            #First iteration
-            self._currind = list(np.zeros(len(self._subshape), dtype=int))
-        else:
-            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
-                self._currind[trace_ind] = 0
-                trace_ind -= 1
-            self._currind[trace_ind] += 1
-        self._currcls -= 1
-        return self.cls[self._currind[:self.cl_axis] + [Ellipsis,] 
-                        + self._currind[self.cl_axis:]]
+        return _cls_iter(self)
 
     def getcls(self):
         return self._cls
@@ -208,15 +186,6 @@ class ClData(object):
             else:
                 raise ValueError("""Index number of input cls does not conform 
                                     to lmax""")
-        #For iterator - reset every time cls is assigned 
-        self._currcls = 1
-        self._subshape = list(cls.shape[:self.cl_axis] + 
-                            cls.shape[self.cl_axis + 1:])
-        for dim in self._subshape:
-            self._currcls *= dim
-        #Copies subshape
-        self._currind = list(self._subshape)
-
         self._cls = cls
 
     cls = property(getcls, setcls)
@@ -317,3 +286,34 @@ class ClData(object):
                 raise ValueError("Cannot append along spectrum axis")
 
         self.cls = np.append(self.cls, cls, axis=along_axis)
+
+class _cls_iter(object):
+    def __init__(self, cd):
+        if not isinstance(cd, ClData):
+            raise TypeError()
+        self._currcls = 1
+        self._subshape = list(cd.cls.shape[:cd.cl_axis] + 
+                            cd.cls.shape[cd.cl_axis + 1:])
+        for dim in self._subshape:
+            self._currcls *= dim
+        self._cls = cd.cls
+        self._cl_axis = cd.cl_axis
+        #Copies subshape
+        self._currind = list(self._subshape)
+
+    def next(self):
+        if self._currcls == 0:
+            raise StopIteration()
+        trace_ind = self._cls.ndim - 2
+        if self._currind == self._subshape:
+            #First iteration
+            self._currind = list(np.zeros(len(self._subshape), dtype=int))
+        else:
+            while (self._currind[trace_ind] == self._subshape[trace_ind] - 1):
+                self._currind[trace_ind] = 0
+                trace_ind -= 1
+            self._currind[trace_ind] += 1
+        self._currcls -= 1
+        return self._cls[self._currind[:self._cl_axis] + [Ellipsis,] 
+                        + self._currind[self._cl_axis:]]
+
