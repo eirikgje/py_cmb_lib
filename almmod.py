@@ -24,7 +24,7 @@ class AlmData(object):
             ind_axis = 0
         self.ind_axis = ind_axis
         self._lmax = None
-        if mmax != None:
+        if mmax != lmax and mmax is not None:
             raise NotImplementedError()
         self.nnind = lmax * (lmax + 1) // 2 + lmax + 1
         if alms is None:

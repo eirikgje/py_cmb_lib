@@ -9,7 +9,7 @@ def read_file(fname, type=None):
         #This will expand as need arises, for now, pretty ad-hoc
         hdulist = pyfits.open(fname)
         if type is None:
-            type = determine_type_fits(hdulist)
+            type = determine_type_fits(hdulist, fname)
         if type.lower() == 'map':
             if len(hdulist) == 2:
                 data = hdulist[1].data
@@ -56,6 +56,15 @@ def read_file(fname, type=None):
                     raise NotImplementedError()
             else:
                 raise NotImplementedError()
+        elif type.lower() == 'weight_ring':
+            if len(hdulist) == 2:
+                data = hdulist[1].data
+                hdr = hdulist[1].header
+                objdata = np.zeros((3, hdr['NAXIS2']))
+                for i in range(3):
+                    objdata[i] = data.field(i)
+            else:
+                raise NotImplementedError()
         else:
             raise NotImplementedError()
         hdulist.close()
@@ -63,8 +72,8 @@ def read_file(fname, type=None):
         raise NotImplementedError()
     return objdata
 
-def determine_type_fits(hdulist):
-    if hdulist[0].data is None:
+def determine_type_fits(hdulist, fname):
+    if len(hdulist) >= 2:
         #Assume extension
         exthdr = hdulist[1].header
         if 'EXTNAME' in exthdr:
@@ -78,6 +87,18 @@ def determine_type_fits(hdulist):
                 return 'alms'
             elif exthdr['EXTNAME'] == 'PIXEL WINDOW':
                 return 'cls'
+        if 'CREATOR' in exthdr:
+            if exthdr['CREATOR'] == 'QUAD_RING':
+                return 'weight_ring'
+        if 'WEIGHTS' in exthdr['TTYPE1']:
+            return 'weight_ring'
+        
+        if fname.beginswith('weight_ring_n'):
+            return 'weight_ring'
+        if fname.beginswith('pixel_window_n'):
+            return 'cls'
+
+        #If things progress down here, it gets a little dirty
         if 'MAX-LPOL' in exthdr:
             if 'MAX-MPOL' in exthdr:
                 return 'alms'
@@ -87,7 +108,10 @@ def determine_type_fits(hdulist):
             if 'MAX-MPOL' in exthdr:
                 return 'alms'
             elif 'MAX-LPOL' in exthdr:
-                return 'cls'
+                if exthdr['NAXIS2'] == 2*exthdr['NSIDE']:
+                    return 'weight_ring'
+                else:
+                    return 'cls'
             else:
                 return 'map'
     else:

@@ -14,31 +14,17 @@ def alm2map(ad, nside):
             for m in range(ad.mmax + 1):
                 convalm[0, l, m] = alm[almmod.lm2ind([l, m])]
         lib.alm2map_sc_d(nside, ad.lmax, ad.mmax, convalm, map[:])
-#    ndims = len(mshape) - 1
-#    indlist = np.array(mshape[:md.pix_axis] + mshape[md.pix_axis + 1:])
-#    currind = list(np.zeros(ndims, dtype=int))
-#    totnmaps = 1
-#    for el in indlist:
-#        totnmaps *= el
-#    for i in range(totnmaps):
-#        curralms = ad.alms[(currind[:ad.ind_axis] + [Ellipsis,] +
-#                            currind[ad.ind_axis:])]
-#        for l in range(ad.lmax + 1):
-#            for m in range(ad.mmax + 1):
-#                convalms[0, l, m] = curralms[almmod.lm2ind([l, m])]
-#        lib.alm2map_sc_d(nside, ad.lmax, ad.mmax, convalms, 
-#                            md.map[currind[:md.pix_axis] 
-#                            + [Ellipsis,] + currind[md.pix_axis:]]) 
-#        traceind = ndims - 1
-#        while indlist[traceind] == currind[traceind] and traceind != 0:
-#            currind[traceind] = 0
-#            traceind -= 1
-#        currind[traceind] += 1
-
     return md
 
-def map2alm(md, lmax, mmax):
+def map2alm(md, lmax, mmax, weights):
     mshape = list(md.map.shape)
-    mshape[ad.ind_axis] = lmax * (lmax + 1) // 2 + mmax + 1
-    ad = almmod.AlmData(lmax, mmax, 
-    
+    mshape[md.pix_axis] = lmax * (lmax + 1) // 2 + mmax + 1
+    ad = almmod.AlmData(lmax, mmax=mmax, alms = np.zeros(mshape, 
+                        dtype=np.complex), pol_axis=md.pol_axis)
+    convalm = np.zeros((1, ad.lmax + 1, ad.mmax + 1), dtype=np.complex)
+    for (map, alm) in zip(md, ad):
+        lib.map2alm_sc_d(md.nside, lmax, mmax, convalm, map, weights)
+        for l in range(ad.lmax + 1):
+            for m in range(ad.mmax + 1):
+                alm[almmod.lm2ind([l, m])] = convalm[0, l, m]
+    return ad
