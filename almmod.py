@@ -15,7 +15,7 @@ def lm2ind(lm):
 
 class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, ind_axis=None,
-                 pol_axis=None):
+                 pol_axis=None, pol_iter=False):
         if alms is not None and ind_axis is not None:
             if alms[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
                 raise ValueError("""Explicit ind_axis does not contain right
@@ -33,6 +33,7 @@ class AlmData(object):
         self.mmax = lmax
         self.alms = alms
         self.pol_axis = pol_axis
+        self.pol_iter = pol_iter
 
     def __iter__(self):
         return _alms_iter(self)
@@ -126,19 +127,38 @@ class _alms_iter(object):
         if not isinstance(ad, AlmData):
             raise TypeError()
         self._curralms = 1
-        self._subshape = list(ad.alms.shape[:ad.ind_axis] + 
+        if ad.pol_iter == True and ad.pol_axis is None:
+            raise ValueError("pol_iter is True but no pol_axis given")
+        self._pol_iter = ad.pol_iter
+        if self._pol_iter:
+            if ad.ind_axis < ad.pol_axis:
+                self._subshape = list(ad.alms.shape[:ad.ind_axis] + 
+                                    ad.alms.shape[ad.ind_axis + 1:ad.pol_axis] +
+                                    ad.alms.shape[ad.pol_axis + 1:])
+            else:
+                self._subshape = list(ad.alms.shape[:ad.pol_axis] + 
+                                    ad.alms.shape[ad.pol_axis + 1:ad.ind_axis] +
+                                    ad.alms.shape[ad.ind_axis + 1:])
+        else:
+            self._subshape = list(ad.alms.shape[:ad.ind_axis] + 
                             ad.alms.shape[ad.ind_axis + 1:])
         for dim in self._subshape:
             self._curralms *= dim
         self._alms = ad.alms
         self._ind_axis = ad.ind_axis
+        self._pol_axis = ad.pol_axis
+        if self._pol_iter:
+            if self._pol_axis < self._ind_axis:
+                self._ind_axis -= 1
+            else:
+                self._pol_axis -= 1
         #Copies subshape
         self._currind = list(self._subshape)
 
     def next(self):
         if self._curralms == 0:
             raise StopIteration()
-        trace_ind = self._alms.ndim - 2
+        trace_ind = len(self._subshape) - 1
         if self._currind == self._subshape:
             #First iteration
             self._currind = list(np.zeros(len(self._subshape), dtype=int))
@@ -148,12 +168,22 @@ class _alms_iter(object):
                 trace_ind -= 1
             self._currind[trace_ind] += 1
         self._curralms -= 1
-        return self._alms[self._currind[:self._ind_axis] + [Ellipsis,] 
+        if self._pol_iter:
+            if self._ind_axis < self._pol_axis:
+                return self._alms[self._currind[:self._ind_axis] + [Ellipsis,]
+                            + self._currind[self._ind_axis:self._pol_axis] 
+                            + [Ellipsis,] + self._currind[self._pol_axis:]]
+            else:
+                return self._alms[self._currind[:self._pol_axis] + [Ellipsis,]
+                            + self._currind[self._pol_axis:self._ind_axis] 
+                            + [Ellipsis,] + self._currind[self._ind_axis:]]
+        else:
+            return self._alms[self._currind[:self._ind_axis] + [Ellipsis,] 
                         + self._currind[self._ind_axis:]]
 
 class ClData(object):
     def __init__(self, lmax, cls=None, spectra='temp', spec_axis=None, 
-                 cl_axis=None):
+                 cl_axis=None, spec_iter=False):
         if cls is not None and cl_axis is not None:
             if cls.shape[cl_axis] != lmax + 1:
                 raise ValueError("""Explicit cl_axis does not contain the right
@@ -168,6 +198,7 @@ class ClData(object):
         self.lmax = lmax
         self.cls = cls
         self.spec_axis = spec_axis
+        self.spec_iter = spec_iter
 
     def __iter__(self):
         return _cls_iter(self)
@@ -293,19 +324,39 @@ class _cls_iter(object):
         if not isinstance(cd, ClData):
             raise TypeError()
         self._currcls = 1
-        self._subshape = list(cd.cls.shape[:cd.cl_axis] + 
+        if cd.spec_iter == True and cd.spec_axis is None:
+            raise ValueError("spec_iter is True but no spec_axis given")
+        self._spec_iter = cd.spec_iter
+        if self._spec_iter:
+            if cd.cl_axis < cd.spec_axis:
+                self._subshape = list(cd.cls.shape[:cd.cl_axis] + 
+                                    cd.cls.shape[cd.cl_axis + 1:cd.spec_axis] +
+                                    cd.cls.shape[cd.spec_axis + 1:])
+            else:
+                self._subshape = list(cd.cls.shape[:cd.spec_axis] + 
+                                    cd.cls.shape[cd.spec_axis + 1:cd.cl_axis] +
+                                    cd.cls.shape[cd.cl_axis + 1:])
+        else:
+            self._subshape = list(cd.cls.shape[:cd.cl_axis] + 
                             cd.cls.shape[cd.cl_axis + 1:])
         for dim in self._subshape:
             self._currcls *= dim
         self._cls = cd.cls
         self._cl_axis = cd.cl_axis
+        self._spec_axis = cd.spec_axis
+        if self._spec_iter:
+            if self._spec_axis < self._cl_axis:
+                self._cl_axis -= 1
+            else:
+                self._spec_axis -= 1
+
         #Copies subshape
         self._currind = list(self._subshape)
 
     def next(self):
         if self._currcls == 0:
             raise StopIteration()
-        trace_ind = self._cls.ndim - 2
+        trace_ind = len(self._subshape) - 1
         if self._currind == self._subshape:
             #First iteration
             self._currind = list(np.zeros(len(self._subshape), dtype=int))
@@ -315,6 +366,15 @@ class _cls_iter(object):
                 trace_ind -= 1
             self._currind[trace_ind] += 1
         self._currcls -= 1
-        return self._cls[self._currind[:self._cl_axis] + [Ellipsis,] 
+        if self._spec_iter:
+            if self._cl_axis < self._spec_axis:
+                return self._cls[self._currind[:self._cl_axis] + [Ellipsis,]
+                            + self._currind[self._cl_axis:self._spec_axis] 
+                            + [Ellipsis,] + self._currind[self._spec_axis:]]
+            else:
+                return self._cls[self._currind[:self._spec_axis] + [Ellipsis,]
+                            + self._currind[self._spec_axis:self._cl_axis] 
+                            + [Ellipsis,] + self._currind[self._cl_axis:]]
+        else:
+            return self._cls[self._currind[:self._cl_axis] + [Ellipsis,] 
                         + self._currind[self._cl_axis:]]
-

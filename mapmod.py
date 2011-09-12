@@ -274,7 +274,7 @@ class MapData(object):
 
     """
     def __init__(self, nside, ordering='ring', map=None, pix_axis=None,
-                 rsubd=None, pol_axis=None):
+                 rsubd=None, pol_axis=None, pol_iter=False):
         if map is not None and pix_axis is not None:
             if map[pix_axis] != 12*nside**2:
                 raise ValueError("""Explicit pix_axis does not contain the right
@@ -291,6 +291,7 @@ class MapData(object):
         self.map = map
         self.ordering = ordering
         self.pol_axis = pol_axis
+        self.pol_iter = pol_iter
 
     def __iter__(self):
         return _map_iter(self)
@@ -403,19 +404,38 @@ class _map_iter(object):
         if not isinstance(md, MapData):
             raise TypeError()
         self._currmap = 1
-        self._subshape = list(md.map.shape[:md.pix_axis] + 
+        if md.pol_iter == True and md.pol_axis is None:
+            raise ValueError("pol_iter is True but no pol_axis given")
+        self._pol_iter = md.pol_iter
+        if self._pol_iter:
+            if md.pix_axis < md.pol_axis:
+                self._subshape = list(md.map.shape[:md.pix_axis] + 
+                                    md.map.shape[md.pix_axis + 1:md.pol_axis] +
+                                    md.map.shape[md.pol_axis + 1:])
+            else:
+                self._subshape = list(md.map.shape[:md.pol_axis] + 
+                                    md.map.shape[md.pol_axis + 1:md.pix_axis] +
+                                    md.map.shape[md.pix_axis + 1:])
+        else:
+            self._subshape = list(md.map.shape[:md.pix_axis] + 
                             md.map.shape[md.pix_axis + 1:])
         for dim in self._subshape:
             self._currmap *= dim
         self._map = md.map
         self._pix_axis = md.pix_axis
+        self._pol_axis = md.pol_axis
+        if self._pol_iter:
+            if self._pol_axis < self._pix_axis:
+                self._pix_axis -= 1
+            else:
+                self._pol_axis -= 1
         #Copies subshape
         self._currind = list(self._subshape)
 
     def next(self):
         if self._currmap == 0:
             raise StopIteration()
-        trace_ind = self._map.ndim - 2
+        trace_ind = len(self._subshape) - 1
         if self._currind == self._subshape:
             #First iteration
             self._currind = list(np.zeros(len(self._subshape), dtype=int))
@@ -425,5 +445,15 @@ class _map_iter(object):
                 trace_ind -= 1
             self._currind[trace_ind] += 1
         self._currmap -= 1
-        return self._map[self._currind[:self._pix_axis] + [Ellipsis,] 
+        if self._pol_iter:
+            if self._pix_axis < self._pol_axis:
+                return self._map[self._currind[:self._pix_axis] + [Ellipsis,]
+                            + self._currind[self._pix_axis:self._pol_axis] 
+                            + [Ellipsis,] + self._currind[self._pol_axis:]]
+            else:
+                return self._map[self._currind[:self._pol_axis] + [Ellipsis,]
+                            + self._currind[self._pol_axis:self._pix_axis] 
+                            + [Ellipsis,] + self._currind[self._pix_axis:]]
+        else:
+            return self._map[self._currind[:self._pix_axis] + [Ellipsis,] 
                         + self._currind[self._pix_axis:]]

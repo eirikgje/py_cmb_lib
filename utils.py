@@ -17,6 +17,8 @@ def alm2map(ad, nside):
     return md
 
 def map2alm(md, lmax, mmax, weights):
+    if md.ordering == 'nested':
+        md.switchordering()
     mshape = list(md.map.shape)
     mshape[md.pix_axis] = lmax * (lmax + 1) // 2 + mmax + 1
     ad = almmod.AlmData(lmax, mmax=mmax, alms = np.zeros(mshape, 
