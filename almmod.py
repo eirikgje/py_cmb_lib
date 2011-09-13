@@ -1,11 +1,20 @@
 from __future__ import division
 import numpy as np
 
-def ind2lm(i):
+def ind2lm(i, ordering='l-major'):
+    #TODO: HERE
     if not isinstance(i, int):
         raise TypeError("index must be integer")
-    l = int((-1 + np.sqrt(1 + 8 * i)) // 2)
-    m = int(i - l * (l + 1) // 2)
+    if not isinstance(ordering, str):
+        raise TypeError("Ordering must be a string")
+    if ordering == 'l-major':
+        l = int((-1 + np.sqrt(1 + 8 * i)) // 2)
+        m = int(i - l * (l + 1) // 2)
+    elif ordering == 'm-major':
+        m = int((-1 + np.sqrt(1 + 8 * i)) // 2)
+        l = int(i - l * (l + 1) // 2)
+
+
     return (l, m)
     
 def lm2ind(lm):
@@ -15,7 +24,7 @@ def lm2ind(lm):
 
 class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, ind_axis=None,
-                 pol_axis=None, pol_iter=False):
+                 pol_axis=None, pol_iter=False, ordering='l-major'):
         if alms is not None and ind_axis is not None:
             if alms[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
                 raise ValueError("""Explicit ind_axis does not contain right
@@ -34,6 +43,7 @@ class AlmData(object):
         self.alms = alms
         self.pol_axis = pol_axis
         self.pol_iter = pol_iter
+        self.ordering=ordering
 
     def __iter__(self):
         return _alms_iter(self)
@@ -87,6 +97,20 @@ class AlmData(object):
         self._pol_axis = pol_axis
 
     pol_axis = property(getpol_axis, setpol_axis)
+
+    def getordering(self):
+        return self._ordering
+    
+    def setordering(self, ordering):
+        if not isinstance(ordering, str):
+            raise TypeError("Ordering must be a string")
+        if ordering.lower() != 'm-major' and ordering.lower() != 'l-major':
+            raise ValueError("Ordering must be m-major or l-major")
+        self._ordering = ordering.lower()
+
+    ordering = property(getordering, setordering)
+
+    def switchordering(self):
 
     def appendalms(self, alms, along_axis=0):
         """Add one or several alms to object instance.
