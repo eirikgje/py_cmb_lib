@@ -63,6 +63,7 @@ def read_file(fname, type=None):
                 objdata = np.zeros((3, hdr['NAXIS2']))
                 for i in range(3):
                     objdata[i] = data.field(i)
+                objdata = objdata + 1
             else:
                 raise NotImplementedError()
         else:
