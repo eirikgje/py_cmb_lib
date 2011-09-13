@@ -20,10 +20,12 @@ def map2alm(md, lmax, mmax, weights):
     mshape = list(md.map.shape)
     mshape[md.pix_axis] = lmax * (lmax + 1) // 2 + mmax + 1
     ad = almmod.AlmData(lmax, mmax=mmax, alms = np.zeros(mshape, 
-                        dtype=np.complex), pol_axis=md.pol_axis)
+                        dtype=np.complex), pol_axis=md.pol_axis, pol_iter=True)
     convalm = np.zeros((1, ad.lmax + 1, ad.mmax + 1), dtype=np.complex)
+    md.pol_iter = True
     for (map, alm) in zip(md, ad):
-        lib.map2alm_sc_d(md.nside, lmax, mmax, convalm, map, weights)
+        if md.pol_axis < md.pix_axis:
+            lib.map2alm_sc_d(md.nside, lmax, mmax, convalm, map[i], weights)
         for l in range(ad.lmax + 1):
             for m in range(ad.mmax + 1):
                 alm[almmod.lm2ind([l, m])] = convalm[0, l, m]
