@@ -292,6 +292,49 @@ def test_iter():
         yield ok_, np.all(alms[[currind,] + [Ellipsis,]] == calms)
         yield ok_, calms.shape == (nels,)
         currind += 1
+    #Keyword pol_iter=True should return (3, nels) or (nels, 3) - array for the
+    #iterator
+    alms = shaperange_cplx((2, 3, nels))
+    ad = almmod.AlmData(lmax, alms=alms, pol_axis=1, pol_iter=True)
+    currind = 0
+    for calms in ad:
+        yield ok_, np.all(alms[[currind,] + [Ellipsis,]] == calms)
+        yield ok_, calms.shape == (3, nels)
+        currind += 1
+    yield eq_, currind, 2
+    alms = shaperange_cplx((5, nels, 3))
+    ad = almmod.AlmData(lmax, alms=alms, pol_axis=2, pol_iter=True)
+    currind = 0
+    for calms in ad:
+        yield ok_, np.all(alms[[currind,] + [Ellipsis,]] == calms)
+        yield ok_, calms.shape == (nels, 3)
+        currind += 1
+    yield eq_, currind, 5
+    alms = shaperange_cplx((5, nels, 6, 3, 3))
+    ad = almmod.AlmData(lmax, alms=alms, pol_axis=3, pol_iter=True)
+    currind = [0, 0, 0]
+    indlist = [5, 6, 3]
+    for calms in ad:
+        yield ok_, np.all(alms[currind[:1] + [Ellipsis,] + currind[1:2] + 
+                        [Ellipsis,] + currind[2:]] == calms)
+        yield ok_, calms.shape == (nels, 3)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
+    alms = shaperange_cplx((4, 3, nels, 7, 1))
+    ad = almmod.AlmData(lmax, alms=alms, pol_axis=1, pol_iter=True)
+    currind = [0, 0, 0]
+    indlist = [4, 7, 1]
+    for calms in ad:
+        yield ok_, np.all(alms[currind[:1] + [Ellipsis,] + currind[1:]] == calms)
+        yield ok_, calms.shape == (3, nels)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
 
 
 def test_iter_cls():
@@ -319,4 +362,50 @@ def test_iter_cls():
         yield ok_, np.all(cls[[currind,] + [Ellipsis,]] == ccls)
         yield ok_, ccls.shape == (lmax+1,)
         currind += 1
+    #Keyword spec_iter=True should return (nspecs, lmax + 1) or 
+    #(lmax + 1, nspecs) - array for the iterator
+    cls = shaperange((2, 6, lmax + 1))
+    cd = almmod.ClData(lmax, cls=cls, spec_axis=1, spec_iter=True, 
+                        spectra='all')
+    currind = 0
+    for ccls in cd:
+        yield ok_, np.all(cls[[currind,] + [Ellipsis,]] == ccls)
+        yield ok_, ccls.shape == (6, lmax + 1)
+        currind += 1
+    yield eq_, currind, 2
+    cls = shaperange((5, lmax + 1, 3))
+    cd = almmod.ClData(lmax, cls=cls, spec_axis=2, spec_iter=True, 
+                        spectra='t-e')
+    currind = 0
+    for ccls in cd:
+        yield ok_, np.all(cls[[currind,] + [Ellipsis,]] == ccls)
+        yield ok_, ccls.shape == (lmax + 1, 3)
+        currind += 1
+    yield eq_, currind, 5
+    cls = shaperange((5, lmax + 1, 6, 1, 3))
+    cd = almmod.ClData(lmax, cls=cls, spec_axis=3, spec_iter=True)
+    currind = [0, 0, 0]
+    indlist = [5, 6, 3]
+    for ccls in cd:
+        yield ok_, np.all(cls[currind[:1] + [Ellipsis,] + currind[1:2] + 
+                        [Ellipsis,] + currind[2:]] == ccls)
+        yield ok_, ccls.shape == (lmax + 1, 1)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
+    cls = shaperange((4, 5, lmax + 1, 7, 1))
+    cd = almmod.ClData(lmax, cls=cls, spec_axis=1, spec_iter=True, 
+                        spectra = ['TT', 'TE', 'EE', 'BB', 'EB'])
+    currind = [0, 0, 0]
+    indlist = [4, 7, 1]
+    for ccls in cd:
+        yield ok_, np.all(cls[currind[:1] + [Ellipsis,] + currind[1:]] == ccls)
+        yield ok_, ccls.shape == (5, lmax + 1)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
 

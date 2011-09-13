@@ -268,4 +268,54 @@ def test_iter():
         yield ok_, np.all(map[[currind,] + [Ellipsis,]] == cmap)
         yield ok_, cmap.shape == (npix,)
         currind += 1
-
+    yield eq_, currind, 3
+    map  = np.arange(npix)
+    md = mapmod.MapData(nside, map=map)
+    currind = 0
+    for cmap in md:
+        yield ok_, np.all(map == cmap)
+        currind += 1
+    yield eq_, currind, 1
+    #Keyword pol_iter=True should return (3, npix) or (npix, 3) - array for the
+    #iterator
+    map = shaperange((2, 3, npix))
+    md = mapmod.MapData(nside, map=map, pol_axis=1, pol_iter=True)
+    currind = 0
+    for cmap in md:
+        yield ok_, np.all(map[[currind,] + [Ellipsis,]] == cmap)
+        yield ok_, cmap.shape == (3, npix)
+        currind += 1
+    yield eq_, currind, 2
+    map = shaperange((5, npix, 3))
+    md = mapmod.MapData(nside, map=map, pol_axis=2, pol_iter=True)
+    currind = 0
+    for cmap in md:
+        yield ok_, np.all(map[[currind,] + [Ellipsis,]] == cmap)
+        yield ok_, cmap.shape == (npix, 3)
+        currind += 1
+    yield eq_, currind, 5
+    map = shaperange((5, npix, 6, 3, 3))
+    md = mapmod.MapData(nside, map=map, pol_axis=3, pol_iter=True)
+    currind = [0, 0, 0]
+    indlist = [5, 6, 3]
+    for cmap in md:
+        yield ok_, np.all(map[currind[:1] + [Ellipsis,] + currind[1:2] + 
+                        [Ellipsis,] + currind[2:]] == cmap)
+        yield ok_, cmap.shape == (npix, 3)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
+    map = shaperange((4, 3, npix, 7, 1))
+    md = mapmod.MapData(nside, map=map, pol_axis=1, pol_iter=True)
+    currind = [0, 0, 0]
+    indlist = [4, 7, 1]
+    for cmap in md:
+        yield ok_, np.all(map[currind[:1] + [Ellipsis,] + currind[1:]] == cmap)
+        yield ok_, cmap.shape == (3, npix)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
