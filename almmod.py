@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 
-def ind2lm(i, ordering='l-major'):
+def ind2lm(i, lmmax=None, ordering='l-major'):
     #TODO: HERE
     if not isinstance(i, int):
         raise TypeError("index must be integer")
@@ -14,13 +14,23 @@ def ind2lm(i, ordering='l-major'):
         m = int((-1 + np.sqrt(1 + 8 * i)) // 2)
         l = int(i - l * (l + 1) // 2)
 
-
     return (l, m)
     
-def lm2ind(lm):
+def lm2ind(lm, lmmax = None, ordering='l-major'):
     if not all([isinstance(j, int) for j in lm]):
         raise TypeError("l, m must be integers")
-    return lm[0] * (lm[0] + 1) // 2 + lm[1]
+    if not isinstance(ordering, str):
+        raise TypeError("Ordering must be a string")
+    if ordering == 'l-major':
+        if lmmax is None or lmmax[0] == lmmax[1]:
+            return lm[0] * (lm[0] + 1) // 2 + lm[1]
+        elif lmmax[0] != lmmax[1]:
+            raise NotImplementedError()
+    elif ordering == 'm-major':
+        if lmmax is None:
+            raise ValueError("""Lmax and mmax must be some value for m-major 
+                                ordering""")
+        return lm[1] * (2 * lmmax[1] + 1 - lm[1]) // 2 + lm[0]
 
 class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, ind_axis=None,
@@ -110,7 +120,7 @@ class AlmData(object):
 
     ordering = property(getordering, setordering)
 
-    def switchordering(self):
+    #def switchordering(self):
 
     def appendalms(self, alms, along_axis=0):
         """Add one or several alms to object instance.

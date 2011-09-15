@@ -144,6 +144,15 @@ def test_lm2ind():
     def func():
         a = almmod.ind2lm((4, 3))
     yield assert_raises, TypeError, func
+    #Test m-major ordering as well:
+    lm2inddic = {(3, 2):10, (2, 1):6}
+    for key, value in lm2inddic.items():
+        yield ok_, almmod.lm2ind(key, lmmax=(4, 4), ordering='m-major') == value
+        yield ok_, almmod.ind2lm(value, lmmax=(4, 4), ordering='m-major') == key
+    lm2inddic = {(5, 4):23, (0, 0):0, (6, 6):27}
+    for key, value in lm2inddic.items():
+        yield ok_, almmod.lm2ind(key, lmmax=(6, 6), ordering='m-major') == value
+        yield ok_, almmod.ind2lm(value, lmmax=(6, 6), ordering='m-major') == key
 
 #Testing of cl-class
 def test_sanitycl():
