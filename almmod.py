@@ -2,7 +2,6 @@ from __future__ import division
 import numpy as np
 
 def ind2lm(i, lmmax=None, ordering='l-major'):
-    #TODO: HERE
     if not isinstance(i, int):
         raise TypeError("index must be integer")
     if not isinstance(ordering, str):
@@ -11,8 +10,9 @@ def ind2lm(i, lmmax=None, ordering='l-major'):
         l = int((-1 + np.sqrt(1 + 8 * i)) // 2)
         m = int(i - l * (l + 1) // 2)
     elif ordering == 'm-major':
-        m = int((-1 + np.sqrt(1 + 8 * i)) // 2)
-        l = int(i - l * (l + 1) // 2)
+        m = int((3+2*lmmax[1] - np.sqrt(9 + 12*lmmax[1] + 4 * lmmax[1] ** 2 
+                - 8 * i)) // 2)
+        l = int(i - m * (2 * lmmax[1] + 1 - m) // 2)
 
     return (l, m)
     
