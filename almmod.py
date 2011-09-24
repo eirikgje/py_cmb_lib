@@ -21,6 +21,8 @@ def lm2ind(lm, lmmax = None, ordering='l-major'):
         raise TypeError("l, m must be integers")
     if not isinstance(ordering, str):
         raise TypeError("Ordering must be a string")
+    if lm[1] > lm[0]:
+        raise ValueError("m must be less or equal to l")
     if ordering == 'l-major':
         if lmmax is None or lmmax[0] == lmmax[1]:
             return lm[0] * (lm[0] + 1) // 2 + lm[1]
@@ -32,11 +34,91 @@ def lm2ind(lm, lmmax = None, ordering='l-major'):
                                 ordering""")
         return lm[1] * (2 * lmmax[1] + 1 - lm[1]) // 2 + lm[0]
 
+def lin2mat(cls, spectra):
+    lmax = cls.shape[1] - 1
+    nspecs = cls.shape[0]
+    if nspecs != 6:
+        raise NotImplementedError()
+    mat = np.zeros((3, 3, lmax + 1))
+    for i in range(nspecs):
+        if spectra[i] == 'TT':
+            mat[0, 0, :] = cls[:, i]
+        if cls.spectra[i] == 'TE':
+            mat[0, 1, :] = cls[:, i]
+            mat[1, 0, :] = mat[:, 0, 1]
+        if cls.spectra[i] == 'TB':
+            mat[0, 2, :] = cls[:, i]
+            mat[2, 0, :] = mat[:, 0, 2]
+        if spectra[i] == 'EE':
+            mat[1, 1, :] = cls[:, i]
+        if cls.spectra[i] == 'EB':
+            mat[1, 2, :] = cls[:, i]
+            mat[2, 1, :] = mat[:, 1, 2]
+        if spectra[i] == 'BB':
+            mat[2, 2, :] = cls[:, i]
+    return mat
+
+#    for i in range(cls.nspecs):
+#        if cls.spectra[i] == 'TT':
+#            mat[cls.spec_axis * [Ellipsis] + [0, 0] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = cls.cls[cls.spec_axis * [Ellipsis] + [i] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#        if cls.spectra[i] == 'TE':
+#            mat[cls.spec_axis * [Ellipsis] + [0, 1] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = cls.cls[cls.spec_axis * [Ellipsis,] + [i] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#            mat[cls.spec_axis * [Ellipsis] + [1, 0] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = mat[cls.spec_axis * [Ellipsis] + [0, 1] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#        if cls.spectra[i] == 'TB':
+#            mat[cls.spec_axis * [Ellipsis] + [0, 2] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = cls.cls[cls.spec_axis * [Ellipsis,] + [i] + (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#            mat[cls.spec_axis * [Ellipsis] + [2, 0] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = mat[cls.spec_axis * [Ellipsis] + [0, 2] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#        if cls.spectra[i] == 'EE':
+#            mat[cls.spec_axis * [Ellipsis] + [1, 1] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = cls.cls[cls.spec_axis * [Ellipsis,] + [i] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#        if cls.spectra[i] == 'EB':
+#            mat[cls.spec_axis * [Ellipsis] + [1, 2] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = cls.cls[cls.spec_axis * [Ellipsis,] + [i] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#            mat[cls.spec_axis * [Ellipsis] + [2, 1] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = mat[cls.spec_axis * [Ellipsis] + [1, 2] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] 
+#        if cls.spectra[i] == 'BB':
+#            mat[cls.spec_axis * [Ellipsis] + [2, 2] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]] = cls.cls[cls.spec_axis * [Ellipsis,] + [i] +  (cls.cls.ndim - cls.spec_axis - 1) * [Ellipsis]]
+#    return mat
+
+def mat2lin(mat, spectra):
+    nspecs = len(spectra)
+    if nspecs != 6:
+        raise NotImplementedError()
+    lmax = mat.shape[2] - 1
+    cls = np.zeros(lmax + 1, nspecs)
+    for i in range(nspecs):
+        if spectra[i] == 'TT':
+            cls[:, i] = mat[0, 0, :] 
+        if cls.spectra[i] == 'TE':
+            cls[:, i] = mat[0, 1, :] 
+        if cls.spectra[i] == 'TB':
+            cls[:, i] = mat[0, 2, :] 
+        if spectra[i] == 'EE':
+            cls[:, i] =  mat[1, 1, :] 
+        if cls.spectra[i] == 'EB':
+            cls[:, i] = mat[1, 2, :] 
+        if spectra[i] == 'BB':
+            cls[:, i] =  mat[2, 2, :] 
+    return cls
+
+
+#def alm2cl(ad):
+#    shape = (ad.alms.shape[:ad.ind_axis] + (ad.lmax + 1) + 
+#            ad.alms.shape[ad.ind_axis + 1:])
+#    if ad.pol_axis is None:
+#        raise NotImplementedError()
+#    if ad.alms.shape[ad.pol_axis] != 3:
+#        raise NotImplementedError()
+#    cls = np.zeros(shape)
+#    cd = almmod.ClData(ad.lmax, cl_axis = ad.ind_axis, 
+#                        spec_axis = ad.pol_axis, spectra = 'all', cls = cls)
+#    for l in range(ad.lmax + 1):
+#        for m in range(l + 1):
+#            cd.cls[cd.ind_axis * [Ellipsis] + [l] + (cd.cls.ndims - cd.ind_axis
+#                - 1) * [Ellipsis]] +
+#        
+
 class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, ind_axis=None,
                  pol_axis=None, pol_iter=False, ordering='l-major'):
         if alms is not None and ind_axis is not None:
-            if alms[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
+            if alms.shape[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
                 raise ValueError("""Explicit ind_axis does not contain right
                                     number of elements""")
         if ind_axis is None:
@@ -412,3 +494,4 @@ class _cls_iter(object):
         else:
             return self._cls[self._currind[:self._cl_axis] + [Ellipsis,] 
                         + self._currind[self._cl_axis:]]
+

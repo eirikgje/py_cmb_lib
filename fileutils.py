@@ -66,6 +66,22 @@ def read_file(fname, type=None):
                 objdata = objdata + 1
             else:
                 raise NotImplementedError()
+        elif type.lower() == 'cls':
+            if len(hdulist) == 2:
+                data = hdulist[1].data
+                hdr = hdulist[1].header
+                cols = hdulist[1].columns
+                if len(cols) == 6:
+                    cls = np.zeros((hdr['NAXIS2'], 6))
+                    for i in range(6):
+                        cls[:, i] = data.field(i)
+                    objdata = almmod.ClData(lmax = hdr['NAXIS2'] - 1, 
+                                spectra=['TT', 'EE', 'BB', 'TE', 'TB', 'EB'], 
+                                spec_axis=1, cls=cls)
+                else:
+                    raise NotImplementedError()
+            else:
+                raise NotImplementedError()
         else:
             raise NotImplementedError()
         hdulist.close()
@@ -94,9 +110,9 @@ def determine_type_fits(hdulist, fname):
         if 'WEIGHTS' in exthdr['TTYPE1']:
             return 'weight_ring'
         
-        if fname.beginswith('weight_ring_n'):
+        if fname.startswith('weight_ring_n'):
             return 'weight_ring'
-        if fname.beginswith('pixel_window_n'):
+        if fname.startswith('pixel_window_n'):
             return 'cls'
 
         #If things progress down here, it gets a little dirty
