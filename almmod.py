@@ -1,24 +1,72 @@
 from __future__ import division
 import numpy as np
 
+_l2m = {}
+_m2l = {}
+
+def _init_m2l(lmmax):
+    global _l2m
+    global _m2l
+#    if _m2l.has_key(lmmax):
+#        _l2m[lmmax] = _m2l[lmmax].argsort()
+#        return
+    inds = np.arange(lmmax[0] * (lmmax[0] + 1) // 2 + lmmax[1] + 1)
+    lm = ind2lm(inds, lmmax, ordering='l-major')
+    newinds = lm2ind(lm, lmmax, ordering='m-major')
+    _m2l[lmmax] = newinds
+
+def _init_l2m(lmmax):
+    global _m2l
+    global _l2m
+#    if _l2m.has_key(lmmax):
+#        _m2l[lmmax] = _l2m[lmmax].argsort()
+#        return
+    inds = np.arange(lmmax[0] * (lmmax[0] + 1) // 2 + lmmax[1] + 1)
+    lm = ind2lm(inds, lmmax, ordering='m-major')
+    newinds = lm2ind(lm, lmmax, ordering='l-major')
+    _l2m[lmmax] = newinds
+
+def l2mmajor(ad):
+    global _l2m
+
+    if not _l2m.has_key((ad.lmax, ad.mmax)):
+        _init_l2m((ad.lmax, ad.mmax))
+    ad.alms = ad.alms[(Ellipsis,) * ad.ind_axis + (_l2m[(ad.lmax, ad.mmax)],) + 
+                    (Ellipsis,) * (ad.alms.ndim - 1 - ad.ind_axis)].copy()
+    ad.ordering = 'm-major'
+
+    return ad
+
+def m2lmajor(ad):
+    global _m2l
+
+    if not _m2l.has_key((ad.lmax, ad.mmax)):
+        _init_m2l((ad.lmax, ad.mmax))
+    ad.alms = ad.alms[(Ellipsis,) * ad.ind_axis + (_m2l[(ad.lmax, ad.mmax)],) + 
+                    (Ellipsis,) * (ad.alms.ndim - 1 - ad.ind_axis)].copy()
+    ad.ordering = 'l-major'
+
+    return ad
+
+
 def ind2lm(i, lmmax=None, ordering='l-major'):
-    if not isinstance(i, int):
-        raise TypeError("index must be integer")
+#    if not isinstance(i, int):
+#        raise TypeError("index must be integer")
     if not isinstance(ordering, str):
         raise TypeError("Ordering must be a string")
     if ordering == 'l-major':
-        l = int((-1 + np.sqrt(1 + 8 * i)) // 2)
-        m = int(i - l * (l + 1) // 2)
+        l = ((-1 + np.sqrt(1 + 8 * i)) // 2).astype(int)
+        m = (i - l * (l + 1) // 2).astype(int)
     elif ordering == 'm-major':
-        m = int((3+2*lmmax[1] - np.sqrt(9 + 12*lmmax[1] + 4 * lmmax[1] ** 2 
-                - 8 * i)) // 2)
-        l = int(i - m * (2 * lmmax[1] + 1 - m) // 2)
+        m = ((3+2*lmmax[1] - np.sqrt(9 + 12*lmmax[1] + 4 * lmmax[1] ** 2 
+                - 8 * i)) // 2).astype(int)
+        l = (i - m * (2 * lmmax[1] + 1 - m) // 2).astype(int)
 
     return (l, m)
     
 def lm2ind(lm, lmmax = None, ordering='l-major'):
-    if not all([isinstance(j, int) for j in lm]):
-        raise TypeError("l, m must be integers")
+#    if not all([isinstance(j, int) for j in lm]):
+#        raise TypeError("l, m must be integers")
     if not isinstance(ordering, str):
         raise TypeError("Ordering must be a string")
     if ordering == 'l-major':
@@ -74,8 +122,8 @@ class AlmData(object):
                     self.ind_axis = i
                     break
             else:
-                raise ValueError("""Index number of input alms does not conform 
-                                    to lmax""")
+                raise ValueError("Index number of input alms does not conform "
+                                 "to lmax")
         self._alms = alms
 
     alms = property(getalms, setalms)
@@ -95,8 +143,8 @@ class AlmData(object):
     def getpol_axis(self):
         if self._pol_axis is not None:
             if self.alms.shape[self._pol_axis] != 3:
-                raise ValueError("""Polarization axis has not been updated since
-                                    changing number of alm dimensions""")
+                raise ValueError("Polarization axis has not been updated since"
+                                 "changing number of alm dimensions")
         return self._pol_axis
 
     def setpol_axis(self, pol_axis):
@@ -120,7 +168,11 @@ class AlmData(object):
 
     ordering = property(getordering, setordering)
 
-    #def switchordering(self):
+    def switchordering(self):
+        if self.ordering == 'm-major':
+            self = m2lmajor(self)
+        elif self.ordering == 'l-major':
+            self = l2mmajor(self)
 
     def appendalms(self, alms, along_axis=0):
         """Add one or several alms to object instance.

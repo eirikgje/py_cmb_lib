@@ -4,23 +4,54 @@ import lib
 import mapmod
 import almmod
 import fileutils
+import psht
 
-def alm2map(ad, nside):
+def alm2map(ad, nside, polarization=True):
+    """Determines (from whether pol_axis is set or not) whether or not to use
+    polarization if polarization=True. If polarization=False, treats each alm
+    as an independent alm.
+    """
     mshape = list(ad.alms.shape)
     mshape[ad.ind_axis] = 12*nside**2
-    md = mapmod.MapData(nside, map=np.zeros(mshape), pol_axis=ad.pol_axis)
+    if polarization:
+        if ad.pol_axis is None:
+            ad.pol_iter = False
+        else:
+            ad.pol_iter = True
+    else:
+        ad.pol_iter = False
+    md = mapmod.MapData(nside, map=np.zeros(mshape), pol_axis=ad.pol_axis, 
+                        pol_iter = ad.pol_iter)
     convalm = np.zeros((1, ad.lmax + 1, ad.mmax + 1), dtype=np.complex)
-    ad.pol_iter = False
+    if ad.ordering == 'l-major':
+        ad.switchordering()
+    info = psht.PshtMmajorHealpix(ad.lmax, nside, 1)
     for (map, alm) in zip(md, ad):
-        for l in range(ad.lmax + 1):
-            for m in range(ad.mmax + 1):
-                convalm[0, l, m] = alm[almmod.lm2ind([l, m])]
-        lib.alm2map_sc_d(nside, ad.lmax, ad.mmax, convalm, map[:])
+        if not ad.pol_iter:
+            map[:] = info.alm2map(alm.reshape(1, alm.shape[0]))
+        else:
+            map[:] = info.alm2map(alm)
     return md
 
-def map2alm(md, lmax, mmax, weights):
+def map2alm(md, lmax, mmax=None, weights=None, polarization=True):
+    """Determines (from whether pol_axis is set or not) whether or not to use
+    polarization if polarization=True. If polarization=False, treats each map
+    as an independent map.
+    """
+    if mmax is None:
+        mmax = lmax
+    if polarization:
+        if md.pol_axis is None:
+            md.pol_iter = False
+        else:
+            md.pol_iter = True
+    else:
+        md.pol_iter = False
     if md.ordering == 'nested':
         md.switchordering()
+    if weights is None:
+        #Try to find file based on data in md
+        weights = 'weight_ring_n%05d.fits' % md.nside
     if isinstance(weights, str):
         weights = fileutils.read_file(weights)
     elif not isinstance(weights, np.ndarray):
@@ -29,33 +60,13 @@ def map2alm(md, lmax, mmax, weights):
         raise ValueError("Weights do not have the right shape")
     mshape = list(md.map.shape)
     mshape[md.pix_axis] = lmax * (lmax + 1) // 2 + mmax + 1
-    if md.pol_axis is None:
-        pol_iter = False
-    else:
-        pol_iter = True
-    md.pol_iter = pol_iter
     ad = almmod.AlmData(lmax, mmax=mmax, alms = np.zeros(mshape, 
                         dtype=np.complex), pol_axis=md.pol_axis, 
-                        pol_iter=pol_iter)
-    convalm = np.zeros((1, ad.lmax + 1, ad.mmax + 1), dtype=np.complex)
+                        pol_iter=md.pol_iter, ordering='m-major')
+    info = psht.PshtMmajorHealpix(ad.lmax, md.nside, 1, weights[0])
     for (map, alm) in zip(md, ad):
-        if pol_iter:
-            for i in range(3):
-                if md.pol_axis < md.pix_axis:
-                    lib.map2alm_sc_d(md.nside, lmax, mmax, map[i], convalm,
-                                     weights[i])
-                    for l in range(ad.lmax + 1):
-                        for m in range(ad.mmax + 1):
-                            alm[i, almmod.lm2ind([l, m])] = convalm[0, l, m]
-                else:
-                    lib.map2alm_sc_d(md.nside, lmax, mmax, convalm, map[:, i],
-                                     weights[i])
-                    for l in range(ad.lmax + 1):
-                        for m in range(ad.mmax + 1):
-                            alm[almmod.lm2ind([l, m]), i] = convalm[0, l, m]
+        if md.pol_iter:
+            alm[:] = info.map2alm(map)
         else:
-            lib.map2alm_sc_d(md.nside, lmax, mmax, convalm, map, weights[0])
-            for l in range(ad.lmax + 1):
-                for m in range(ad.mmax + 1):
-                    alm[almmod.lm2ind([l, m])] = convalm[0, l, m]
+            alm[:] = info.map2alm(map.reshape(1, map.shape[0]))
     return ad

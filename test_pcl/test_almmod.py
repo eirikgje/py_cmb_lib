@@ -19,7 +19,7 @@ def shaperange_cplx(shape):
         m = m * s
     out = np.zeros(m, dtype = np.complex)
     for i in range(int(m)):
-        out[i] = np.complex(2*i, 2*i+1)
+        out[i] = np.complex(i, m + i)
     out = out.reshape(shape)
     return out.copy()
 
@@ -132,18 +132,18 @@ def test_lm2ind():
     for key, value in lm2inddic.items():
         yield ok_, almmod.lm2ind(key) == value
         yield ok_, almmod.ind2lm(value) == key
-    def func():
-        a = almmod.ind2lm(3.0)
-    yield assert_raises, TypeError, func
-    def func():
-        a = almmod.lm2ind(3)
-    yield assert_raises, TypeError, func
-    def func():
-        a = almmod.lm2ind((3.0, 4))
-    yield assert_raises, TypeError, func
-    def func():
-        a = almmod.ind2lm((4, 3))
-    yield assert_raises, TypeError, func
+#    def func():
+#        a = almmod.ind2lm(3.0)
+#    yield assert_raises, TypeError, func
+#    def func():
+#        a = almmod.lm2ind(3)
+#    yield assert_raises, TypeError, func
+#    def func():
+#        a = almmod.lm2ind((3.0, 4))
+#    yield assert_raises, TypeError, func
+#    def func():
+#        a = almmod.ind2lm((4, 3))
+#    yield assert_raises, TypeError, func
     #Test m-major ordering as well:
     lm2inddic = {(3, 2):10, (2, 1):6}
     for key, value in lm2inddic.items():
@@ -153,6 +153,28 @@ def test_lm2ind():
     for key, value in lm2inddic.items():
         yield ok_, almmod.lm2ind(key, lmmax=(6, 6), ordering='m-major') == value
         yield ok_, almmod.ind2lm(value, lmmax=(6, 6), ordering='m-major') == key
+    #Test conversion of alms between m-major and l-major ordering
+    lmax = 4
+    mmax = 4
+    nels = lmax * (lmax + 1) // 2 + mmax + 1
+    alms = shaperange_cplx((nels,))
+    ad = almmod.AlmData(lmax, alms=alms)
+    ad.switchordering()
+    #l2mdic = {13 : 286, 3593 : 2016, 348 : 1957}
+    l2mdic = {6 : 3, 11 : 8}
+    for key, value in l2mdic.items():
+        yield eq_, int(ad.alms[key].real), value
+
+    lmax = 5
+    mmax = 5
+    nels = lmax * (lmax + 1) // 2 + mmax + 1
+    alms = shaperange_cplx((nels,))
+    ad = almmod.AlmData(lmax, alms=alms)
+    ad.switchordering()
+    l2mdic = {5 : 11, 14 : 18, 20 : 20}
+    for key, value in l2mdic.items():
+        yield eq_, int(ad.alms[key].real), value
+
 
 #Testing of cl-class
 def test_sanitycl():
@@ -162,8 +184,8 @@ def test_sanitycl():
     cd = almmod.ClData(lmax, cls=cls)
     yield ok_, np.all(cd.cls == cls)
     cls = shaperange_cplx((4, lmax + 1, 8))
-    ad = almmod.ClData(lmax, cls=cls)
-    yield eq_, ad.cls.shape, (4, lmax + 1, 8)
+    cd = almmod.ClData(lmax, cls=cls)
+    yield eq_, cd.cls.shape, (4, lmax + 1, 8)
 
 def test_initcl():
     cls = np.arange(lmax + 1)
