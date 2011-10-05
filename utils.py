@@ -70,3 +70,4 @@ def map2alm(md, lmax, mmax=None, weights=None, polarization=True):
         else:
             alm[:] = info.map2alm(map.reshape(1, map.shape[0]))
     return ad
+

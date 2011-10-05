@@ -132,18 +132,6 @@ def test_lm2ind():
     for key, value in lm2inddic.items():
         yield ok_, almmod.lm2ind(key) == value
         yield ok_, almmod.ind2lm(value) == key
-#    def func():
-#        a = almmod.ind2lm(3.0)
-#    yield assert_raises, TypeError, func
-#    def func():
-#        a = almmod.lm2ind(3)
-#    yield assert_raises, TypeError, func
-#    def func():
-#        a = almmod.lm2ind((3.0, 4))
-#    yield assert_raises, TypeError, func
-#    def func():
-#        a = almmod.ind2lm((4, 3))
-#    yield assert_raises, TypeError, func
     #Test m-major ordering as well:
     lm2inddic = {(3, 2):10, (2, 1):6}
     for key, value in lm2inddic.items():
@@ -163,7 +151,7 @@ def test_lm2ind():
     #l2mdic = {13 : 286, 3593 : 2016, 348 : 1957}
     l2mdic = {6 : 3, 11 : 8}
     for key, value in l2mdic.items():
-        yield eq_, int(ad.alms[key].real), value
+        yield eq_, int(ad.alms[value].real), key
 
     lmax = 5
     mmax = 5
@@ -173,7 +161,7 @@ def test_lm2ind():
     ad.switchordering()
     l2mdic = {5 : 11, 14 : 18, 20 : 20}
     for key, value in l2mdic.items():
-        yield eq_, int(ad.alms[key].real), value
+        yield eq_, int(ad.alms[value].real), key
 
 
 #Testing of cl-class
@@ -440,3 +428,7 @@ def test_iter_cls():
             trace_ind -= 1
         currind[trace_ind] += 1
 
+
+#def test_mul_alms():
+#    #Testing multiplication operator
+#    ad = almmod.AlmData(lmax, alms=alms)
