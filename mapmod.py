@@ -190,6 +190,14 @@ def _mk_pix2xy():
         else:
             _pix2y[i] = int(b[-2::-2][::-1], 2)
 
+def _compatible(md1, md2):
+    if (md1.nside != md2.nside or md1.map.shape != md2.map.shape or 
+        md1.pol_axis != md2.pol_axis or md1.pix_axis != md2.pix_axis or
+        md1.ordering != md2.ordering or md1.pol_iter != md2.pol_iter):
+        return False
+    else:
+        return True
+
 def degrade_average(md, nside_n):
     """Degrade input map to nside resolution by averaging over pixels.
     
@@ -274,9 +282,9 @@ class MapData(object):
 
     """
     def __init__(self, nside, ordering='ring', map=None, pix_axis=None,
-                 rsubd=None, pol_axis=None, pol_iter=False):
+                 pol_axis=None, pol_iter=False):
         if map is not None and pix_axis is not None:
-            if map[pix_axis] != 12*nside**2:
+            if map.shape[pix_axis] != 12 * nside ** 2:
                 raise ValueError("""Explicit pix_axis does not contain the right
                                     number of pixels""")
         if pix_axis is None:
@@ -295,6 +303,41 @@ class MapData(object):
 
     def __iter__(self):
         return _map_iter(self)
+
+    def __add__(self, other):
+        if _compatible(self, other):
+            return MapData(nside=self.nside, ordering=self.ordering, 
+                           pix_axis=self.pix_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, map=self.map + other.map)
+        else:
+            raise ValueError("Maps not compatible for adding")
+
+    def __mul__(self, other):
+        if _compatible(self, other):
+            return MapData(nside=self.nside, ordering=self.ordering, 
+                           pix_axis=self.pix_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, map=self.map * other.map)
+        else:
+            raise ValueError("Maps not compatible for multiplying")
+
+    def __sub__(self, other):
+        if _compatible(self, other):
+            return MapData(nside=self.nside, ordering=self.ordering, 
+                           pix_axis=self.pix_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, map=self.map - other.map)
+        else:
+            raise ValueError("Maps not compatible for subtracting")
+
+    def __truediv__(self, other):
+        if _compatible(self, other):
+            return MapData(nside=self.nside, ordering=self.ordering, 
+                           pix_axis=self.pix_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, map=self.map / other.map)
+        else:
+            raise ValueError("Maps not compatible for dividing")
+
+    def __getitem__(self, index):
+        return self.map[index]
 
     def getmap(self):
         return self._map
@@ -315,6 +358,11 @@ class MapData(object):
         self._map = map
 
     map = property(getmap, setmap)
+
+    def getshape(self):
+        return self.map.shape
+
+    shape = property(getshape)
 
     def getordering(self):
         return self._ordering

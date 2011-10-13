@@ -78,5 +78,5 @@ def map2gif(md, signal='all', prefix='testmap'):
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "3.gif -bar true -sig 3"))
 
 
-def draw_gaussian_map(nside):
-    npix = 12 * nside ** 2
+#def draw_gaussian_map(nside):
+#    npix = 12 * nside ** 2

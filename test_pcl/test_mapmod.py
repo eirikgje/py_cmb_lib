@@ -319,3 +319,16 @@ def test_iter():
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
+
+def test_operators():
+    md = mapmod.MapData(nside=nside, map=map)
+    md2 = mapmod.MapData(nside=nside, map=map)
+    yield ok_, np.all(md.map + md2.map == (md + md2).map)
+    yield ok_, np.all(md.map + md.map == (md + md).map)
+    yield ok_, np.all(md.map * md2.map == (md * md2).map)
+    yield ok_, np.all(md.map - md2.map == (md - md2).map)
+    md.map = md.map + 1
+    md2.map = md.map + 1
+    yield ok_, np.all(md.map / md2.map == (md / md2).map)
+    yield eq_, md.map[67], md[67]
+    yield eq_, md.shape, md.map.shape
