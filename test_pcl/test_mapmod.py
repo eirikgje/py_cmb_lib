@@ -5,7 +5,7 @@ from nose.tools import ok_, eq_, assert_raises
 
 nside = 32
 npix = 12*nside**2
-map = np.arange(npix)
+map = np.arange(npix, dtype=np.double)
 
 def shaperange(shape, dtype=float):
     m = 1
@@ -331,4 +331,6 @@ def test_operators():
     md2.map = md.map + 1
     yield ok_, np.all(md.map / md2.map == (md / md2).map)
     yield eq_, md.map[67], md[67]
+    md[87] = 245.23
+    yield eq_, md[87], 245.23
     yield eq_, md.shape, md.map.shape

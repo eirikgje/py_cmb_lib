@@ -428,6 +428,20 @@ def test_iter_cls():
             trace_ind -= 1
         currind[trace_ind] += 1
 
+def test_operators():
+    ad = almmod.AlmData(lmax=lmax, alms=alms)
+    ad2 = almmod.AlmData(lmax=lmax, alms=alms)
+    yield ok_, np.all(ad.alms + ad2.alms == (ad + ad2).alms)
+    yield ok_, np.all(ad.alms + ad.alms == (ad + ad).alms)
+    yield ok_, np.all(ad.alms * ad2.alms == (ad * ad2).alms)
+    yield ok_, np.all(ad.alms - ad2.alms == (ad - ad2).alms)
+    ad.alms = ad.alms + 1
+    ad2.alms = ad.alms + 1
+    yield ok_, np.all(ad.alms / ad2.alms == (ad / ad2).alms)
+    yield eq_, ad.alms[67], ad[67]
+    ad[87] = 245.23
+    yield eq_, ad[87], 245.23
+    yield eq_, ad.shape, ad.alms.shape
 
 #def test_mul_alms():
 #    #Testing multiplication operator

@@ -339,6 +339,9 @@ class MapData(object):
     def __getitem__(self, index):
         return self.map[index]
 
+    def __setitem__(self, key, item):
+        self.map[key] = item
+
     def getmap(self):
         return self._map
 

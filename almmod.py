@@ -28,6 +28,15 @@ def _init_l2m(lmmax):
     newinds = lm2ind(lm, lmmax, ordering='l-major')
     _l2m[lmmax] = newinds
 
+def _compatible(ad1, ad2):
+    if (ad1.lmax != ad2.lmax or ad1.mmax != ad2.mmax or 
+        ad1.ordering != ad2.ordering or ad1.alms.shape != ad2.alms.shape or 
+        ad1.ind_axis != ad2.ind_axis or ad1.pol_axis != ad2.pol_axis or 
+        ad1.pol_iter != ad2.pol_iter):
+        return False
+    else:
+        return True
+
 def l2mmajor(ad):
     global _l2m
 
@@ -86,7 +95,7 @@ class AlmData(object):
     def __init__(self, lmax, mmax=None, alms=None, ind_axis=None,
                  pol_axis=None, pol_iter=False, ordering='l-major'):
         if alms is not None and ind_axis is not None:
-            if alms[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
+            if alms.shape[ind_axis] != lmax * (lmax + 1) // 2 + lmax + 1:
                 raise ValueError("""Explicit ind_axis does not contain right
                                     number of elements""")
         if ind_axis is None:
@@ -107,6 +116,49 @@ class AlmData(object):
 
     def __iter__(self):
         return _alms_iter(self)
+
+    def __add__(self, other):
+        if _compatible(self, other):
+            return AlmData(lmax=self.lmax, ordering=self.ordering, 
+                           ind_axis=self.ind_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, alms=self.alms + other.alms)
+        else:
+            raise ValueError("Alms not compatible for adding")
+
+    def __mul__(self, other):
+        if _compatible(self, other):
+            return AlmData(lmax=self.lmax, ordering=self.ordering, 
+                           ind_axis=self.ind_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, alms=self.alms * other.alms)
+        else:
+            raise ValueError("Alms not compatible for multiplying")
+
+    def __sub__(self, other):
+        if _compatible(self, other):
+            return AlmData(lmax=self.lmax, ordering=self.ordering, 
+                           ind_axis=self.ind_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, alms=self.alms - other.alms)
+        else:
+            raise ValueError("Alms not compatible for subtracting")
+
+    def __truediv__(self, other):
+        if _compatible(self, other):
+            return AlmData(lmax=self.lmax, ordering=self.ordering, 
+                           ind_axis=self.ind_axis, pol_axis=self.pol_axis,
+                           pol_iter=self.pol_iter, alms=self.alms / other.alms)
+        else:
+            raise ValueError("Alms not compatible for dividing")
+
+    def __getitem__(self, index):
+        return self.alms[index]
+
+    def __setitem__(self, key, item):
+        self.alms[key] = item
+
+    def getshape(self):
+        return self.alms.shape
+
+    shape = property(getshape)
 
     def getalms(self):
         return self._alms
