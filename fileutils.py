@@ -4,7 +4,7 @@ import pyfits
 import mapmod
 import almmod
 
-def read_file(fname, type=None):
+def read_file(fname, type=None, **kwargs):
     if fname.endswith('.fits'):
         #This will expand as need arises, for now, pretty ad-hoc
         hdulist = pyfits.open(fname)
@@ -88,6 +88,8 @@ def determine_type_fits(hdulist, fname):
                 return 'alms'
             elif exthdr['EXTNAME'] == 'PIXEL WINDOW':
                 return 'cls'
+            elif exthdr['EXTNAME'] == 'SIMULATED MAP':
+                return 'map'
         if 'CREATOR' in exthdr:
             if exthdr['CREATOR'] == 'QUAD_RING':
                 return 'weight_ring'

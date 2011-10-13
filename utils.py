@@ -5,50 +5,33 @@ import mapmod
 import almmod
 import fileutils
 import psht
+import subprocess
+import shlex
 
-def alm2map(ad, nside, polarization=True):
+def alm2map(ad, nside):
     """Determines (from whether pol_axis is set or not) whether or not to use
     polarization if polarization=True. If polarization=False, treats each alm
     as an independent alm.
     """
-    mshape = list(ad.alms.shape)
-    mshape[ad.ind_axis] = 12*nside**2
-    if polarization:
-        if ad.pol_axis is None:
-            ad.pol_iter = False
-        else:
-            ad.pol_iter = True
-    else:
-        ad.pol_iter = False
-    md = mapmod.MapData(nside, map=np.zeros(mshape), pol_axis=ad.pol_axis, 
-                        pol_iter = ad.pol_iter)
-    convalm = np.zeros((1, ad.lmax + 1, ad.mmax + 1), dtype=np.complex)
     if ad.ordering == 'l-major':
         ad.switchordering()
-    info = psht.PshtMmajorHealpix(ad.lmax, nside, 1)
-    for (map, alm) in zip(md, ad):
-        if not ad.pol_iter:
-            map[:] = info.alm2map(alm.reshape(1, alm.shape[0]))
-        else:
-            map[:] = info.alm2map(alm)
+    computer = psht.PshtMmajorHealpix(lmax=ad.lmax, nside=nside, alm=ad.alms,
+                                      alm_polarization=ad.pol_axis, 
+                                      alm_axis=ad.ind_axis, 
+                                      map_axis=ad.ind_axis,
+                                      map_polarization=ad.pol_axis)
+    map = computer.alm2map()
+    md = mapmod.MapData(nside, map=map, pol_axis=ad.pol_axis, 
+                        pol_iter = ad.pol_iter, ordering='ring')
     return md
 
-def map2alm(md, lmax, mmax=None, weights=None, polarization=True):
+def map2alm(md, lmax, mmax=None, weights=None):
     """Determines (from whether pol_axis is set or not) whether or not to use
     polarization if polarization=True. If polarization=False, treats each map
     as an independent map.
     """
     if mmax is None:
         mmax = lmax
-    if polarization:
-        if md.pol_axis is None:
-            md.pol_iter = False
-        else:
-            md.pol_iter = True
-    else:
-        md.pol_iter = False
-    if md.ordering == 'nested':
-        md.switchordering()
     if weights is None:
         #Try to find file based on data in md
         weights = 'weight_ring_n%05d.fits' % md.nside
@@ -58,16 +41,42 @@ def map2alm(md, lmax, mmax=None, weights=None, polarization=True):
         raise TypeError("Weights must be either filename or numpy array")
     if weights.shape != (3, 2*md.nside):
         raise ValueError("Weights do not have the right shape")
-    mshape = list(md.map.shape)
-    mshape[md.pix_axis] = lmax * (lmax + 1) // 2 + mmax + 1
-    ad = almmod.AlmData(lmax, mmax=mmax, alms = np.zeros(mshape, 
-                        dtype=np.complex), pol_axis=md.pol_axis, 
+    computer = psht.PshtMmajorHealpix(nside=md.nside, lmax=lmax, mmax=mmax,
+                                      map=md.map,
+                                      alm_polarization=md.pol_axis, 
+                                      alm_axis=md.pix_axis, 
+                                      map_axis=md.pix_axis,
+                                      map_polarization=md.pol_axis,
+                                      weights=weights[0])
+    alm = computer.map2alm()
+    ad = almmod.AlmData(lmax, mmax=mmax, alms=alm, pol_axis=md.pol_axis, 
                         pol_iter=md.pol_iter, ordering='m-major')
-    info = psht.PshtMmajorHealpix(ad.lmax, md.nside, 1, weights[0])
-    for (map, alm) in zip(md, ad):
-        if md.pol_iter:
-            alm[:] = info.map2alm(map)
-        else:
-            alm[:] = info.map2alm(map.reshape(1, map.shape[0]))
     return ad
 
+def plot(md, signal='all'):
+    """Uses map2gif to plot a MapData map"""
+    subprocess.call(shlex.split("rm zokozokomap.fits"))
+    subprocess.call(shlex.split("rm zokozokomap.gif"))
+    subprocess.call(shlex.split("rm zokozokomap2.gif"))
+    subprocess.call(shlex.split("rm zokozokomap3.gif"))
+    fileutils.write_file('zokozokomap.fits', md)
+    if signal == 'all':
+        subprocess.call(shlex.split("map2gif -inp zokozokomap.fits -out zokozokomap.gif -bar true"))
+        subprocess.call(shlex.split("map2gif -inp zokozokomap.fits -out zokozokomap2.gif -bar true -sig 2"))
+        subprocess.call(shlex.split("map2gif -inp zokozokomap.fits -out zokozokomap3.gif -bar true -sig 3"))
+        subprocess.call(shlex.split("eog zokozokomap.gif &"))
+
+def map2gif(md, signal='all', prefix='testmap'):
+    subprocess.call(shlex.split("rm " + prefix + '.fits'))
+    subprocess.call(shlex.split("rm " + prefix + '.gif'))
+    subprocess.call(shlex.split("rm " + prefix + '2.gif'))
+    subprocess.call(shlex.split("rm " + prefix + '3.gif'))
+    fileutils.write_file(prefix + '.fits', md)
+    if signal == 'all':
+        subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + ".gif -bar true"))
+        subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "2.gif -bar true -sig 2"))
+        subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "3.gif -bar true -sig 3"))
+
+
+def draw_gaussian_map(nside):
+    npix = 12 * nside ** 2

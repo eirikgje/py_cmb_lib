@@ -7,10 +7,11 @@ _m2l = {}
 def _init_m2l(lmmax):
     global _l2m
     global _m2l
-#    if _m2l.has_key(lmmax):
-#        _l2m[lmmax] = _m2l[lmmax].argsort()
-#        return
-    inds = np.arange(lmmax[0] * (lmmax[0] + 1) // 2 + lmmax[1] + 1)
+    if _m2l.has_key(lmmax):
+        _l2m[lmmax] = _m2l[lmmax].argsort()
+        return
+    inds = np.arange((2 * lmmax[0] - lmmax[1]) * (lmmax[1] + 1) // 2 + 
+                      lmmax[1] + 1)
     lm = ind2lm(inds, lmmax, ordering='l-major')
     newinds = lm2ind(lm, lmmax, ordering='m-major')
     _m2l[lmmax] = newinds
@@ -18,10 +19,11 @@ def _init_m2l(lmmax):
 def _init_l2m(lmmax):
     global _m2l
     global _l2m
-#    if _l2m.has_key(lmmax):
-#        _m2l[lmmax] = _l2m[lmmax].argsort()
-#        return
-    inds = np.arange(lmmax[0] * (lmmax[0] + 1) // 2 + lmmax[1] + 1)
+    if _l2m.has_key(lmmax):
+        _m2l[lmmax] = _l2m[lmmax].argsort()
+        return
+    inds = np.arange((2 * lmmax[0] - lmmax[1]) * (lmmax[1] + 1) // 2 + 
+                      lmmax[1] + 1)
     lm = ind2lm(inds, lmmax, ordering='m-major')
     newinds = lm2ind(lm, lmmax, ordering='l-major')
     _l2m[lmmax] = newinds
