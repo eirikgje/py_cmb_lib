@@ -442,7 +442,3 @@ def test_operators():
     ad[87] = 245.23
     yield eq_, ad[87], 245.23
     yield eq_, ad.shape, ad.alms.shape
-
-#def test_mul_alms():
-#    #Testing multiplication operator
-#    ad = almmod.AlmData(lmax, alms=alms)
