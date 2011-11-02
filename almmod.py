@@ -138,7 +138,7 @@ class AlmData(object):
             if (self.lmax <= other.lmax):
                 nalms = np.zeros(self.alms.shape, dtype=np.complex)
                 if self.pol_axis is not None:
-                    if not other.pol:
+                    if other.pol_axis is None:
                         raise ValueError("Beam is not polarized, but alms is")
                     for i in range(3):
                         for l in range(self.lmax + 1):
@@ -155,9 +155,9 @@ class AlmData(object):
                                             (i,) + (slice(None),) * \
                                             (self.ind_axis - self.pol_axis - \
                                             1) + (ind,) + (Ellipsis,)
-                                elif self.ind_axis > self.pol_axis:
+                                elif self.ind_axis < self.pol_axis:
                                     sl = (slice(None),) * self.ind_axis + \
-                                            (ind,) + (slice(None,)) * \
+                                            (ind,) + (slice(None),) * \
                                             (self.pol_axis - self.ind_axis - \
                                             1) + (i,) + (Ellipsis,)
                                 nalms[sl] = self.alms[sl] * bsl

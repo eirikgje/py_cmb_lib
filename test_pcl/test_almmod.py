@@ -458,3 +458,23 @@ def test_operators():
             ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
             res[ind] = alms[ind] * beam[l]
     yield ok_, np.all((ad * bd).alms == res)
+    nalms = shaperange_cplx((nels, 3))
+    beam = shaperange((lmax + 1, 3))
+    ad = almmod.AlmData(lmax=lmax, alms=nalms, pol_axis=1)
+    bd = beammod.BeamData(lmax=lmax, beam=beam, pol_axis=1)
+    res = np.zeros(nalms.shape, dtype=np.complex)
+    for l in range(lmax + 1):
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            res[ind, :] = nalms[ind, :] * beam[l, :]
+    yield ok_, np.all((ad * bd).alms == res)
+    nalms = shaperange_cplx((3, nels))
+    beam = shaperange((3, lmax + 1))
+    ad = almmod.AlmData(lmax=lmax, alms=nalms, pol_axis=0)
+    bd = beammod.BeamData(lmax=lmax, beam=beam, pol_axis=0)
+    res = np.zeros(nalms.shape, dtype=np.complex)
+    for l in range(lmax + 1):
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            res[:, ind] = nalms[:, ind] * beam[:, l]
+    yield ok_, np.all((ad * bd).alms == res)

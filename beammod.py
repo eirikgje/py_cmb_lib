@@ -18,13 +18,15 @@ def gaussbeam(fwhm, lmax, pol=False):
     if ndim == 3:
         factor_pol = np.exp([0.0, 2.0*sig2, 2.0*sig2])
         gout = g * factor_pol
+        pol_axis = 1
     elif ndim == 1:
         gout = g
-    beam = BeamData(lmax, beam=gout, pol=pol, beam_axis=0)
+        pol_axis = None
+    beam = BeamData(lmax, beam=gout, pol_axis=pol_axis, beam_axis=0)
     return beam
 
 class BeamData(object):
-    def __init__(self, lmax, beam=None, pol=False, beam_axis=None):
+    def __init__(self, lmax, beam=None, pol_axis=None, beam_axis=None):
         if beam is not None and beam_axis is not None:
             if beam.shape[beam_axis] != lmax + 1:
                 raise ValueError("Explicit beam_axis does not contain the "
@@ -32,18 +34,34 @@ class BeamData(object):
         if beam_axis is None:
             beam_axis = 0
         self.beam_axis = beam_axis
-        self.pol = pol
         if beam is None:
             beam = np.zeros(lmax + 1)
         self._lmax = None
         self.lmax = lmax
         self.beam = beam
+        self.pol_axis = pol_axis
 
     def __getitem__(self, index):
         return self.beam[index]
 
     def __setitem__(self, key, item):
         self.beam[key] = item
+
+    def getpol_axis(self):
+        if self._pol_axis is not None:
+            if self.beam.shape[self._pol_axis] != 3:
+                raise ValueError("Polarization axis has not been updated since"
+                                 "changing number of beam dimensions")
+        return self._pol_axis
+
+    def setpol_axis(self, pol_axis):
+        if pol_axis is not None:
+            if self.beam.shape[pol_axis] != 3:
+                self._pol_axis = None
+                raise ValueError("Polarization axis does not have 3 dimensions")
+        self._pol_axis = pol_axis
+
+    pol_axis = property(getpol_axis, setpol_axis)
 
     def getlmax(self):
         return self._lmax
