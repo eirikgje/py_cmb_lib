@@ -136,17 +136,17 @@ class AlmData(object):
                 raise ValueError("Alms not compatible for multiplying")
         elif isinstance(other, beammod.BeamData):
             if (self.lmax <= other.lmax):
+                nalms = np.zeros(self.alms.shape, dtype=np.complex)
                 if self.pol_axis is not None:
                     if not other.pol:
                         raise ValueError("Beam is not polarized, but alms is")
-                    nalms = np.zeros(self.alms.shape, dtype=np.complex)
                     for i in range(3):
                         for l in range(self.lmax + 1):
                             if other.beam_axis == 0:
                                 bsl = other.beam[l, i]
                             elif other.beam_axis == 1:
                                 bsl = other.beam[i, l]
-                            for m in range(l):
+                            for m in range(l + 1):
                                 ind = lm2ind((l, m), 
                                               lmmax=(self.lmax, self.mmax),
                                               ordering=self.ordering)
@@ -170,13 +170,13 @@ class AlmData(object):
                                 bsl = other.beam[l, 0]
                             elif other.beam_axis == 1:
                                 bsl = other.beam[0, l]
-                            for m in range(l):
-                                ind = lm2ind((l, m), 
-                                              lmmax=(self.lmax, self.mmax),
-                                              ordering=self.ordering)
-                                sl = (slice(None),) * self.ind_axis + \
-                                             (i,) + (Ellipsis,)
-                                nalms[sl] = self.alms[sl] * bsl
+                        for m in range(l + 1):
+                            ind = lm2ind((l, m), lmmax=(self.lmax, self.mmax),
+                                    ordering=self.ordering)
+                            #print ind
+                            sl = (slice(None),) * self.ind_axis + (ind,) + \
+                                    (Ellipsis,)
+                            nalms[sl] = self.alms[sl] * bsl
                 return AlmData(lmax=self.lmax, ordering=self.ordering, 
                                 ind_axis=self.ind_axis, pol_axis=self.pol_axis,
                                 pol_iter=self.pol_iter, alms=nalms)

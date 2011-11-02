@@ -163,7 +163,13 @@ def test_lm2ind():
     l2mdic = {5 : 11, 14 : 18, 20 : 20}
     for key, value in l2mdic.items():
         yield eq_, int(ad.alms[value].real), key
-
+    ls = ()
+    for l in range(lmax + 1):
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            if ind in ls:
+                raise AssertionError()
+            ls += (ind,)
 
 #Testing of cl-class
 def test_sanitycl():
@@ -445,5 +451,10 @@ def test_operators():
     yield eq_, ad.shape, ad.alms.shape
     beam = cls
     bd = beammod.BeamData(lmax=lmax, beam=beam)
+    ad = almmod.AlmData(lmax=lmax, alms=alms)
+    res = np.zeros(alms.shape, dtype=np.complex)
     for l in range(lmax + 1):
-
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            res[ind] = alms[ind] * beam[l]
+    yield ok_, np.all((ad * bd).alms == res)
