@@ -2,8 +2,12 @@ from __future__ import division
 import numpy as np
 import almmod
 
-def gaussbeam(fwhm, lmax, ndim=1):
+def gaussbeam(fwhm, lmax, pol=False):
     """ fwhm in arcmin """
+    if pol:
+        ndim = 3
+    else:
+        ndim = 1
 
     sigma = fwhm/(60.0 * 180.0) * np.pi / np.sqrt(8.0*np.log(2.0))
     l = np.arange(lmax + 1)
@@ -11,19 +15,12 @@ def gaussbeam(fwhm, lmax, ndim=1):
     g = np.exp(-0.5*l*(l+1.0)*sig2)
     g = np.resize(g, (ndim, g.size))
     g = g.swapaxes(0, 1)
-    if ndim > 1:
-        if ndim > 4:
-            raise ValueError("ndim must be 4 or less")
-    if ndim == 4:
-        factor_pol = np.exp([0.0, 2.0*sig2, 2.0*sig2, sig2])
-        gout = g * factor_pol[0:ndim]
-        spectra = ['TT', 'EE', 'BB', 'TE']
+    if ndim == 3:
+        factor_pol = np.exp([0.0, 2.0*sig2, 2.0*sig2])
+        gout = g * factor_pol
     elif ndim == 1:
         gout = g
-        spectra = 'temp'
-    else:
-        raise NotImplementedError()
-    beam = almmod.ClData(lmax, cls=gout, spectra=spectra, spec_axis=1)
+    beam = BeamData(lmax, beam=gout, pol=pol, beam_axis=0)
     return beam
 
 class BeamData(object):
@@ -41,6 +38,24 @@ class BeamData(object):
         self._lmax = None
         self.lmax = lmax
         self.beam = beam
+
+    def __getitem__(self, index):
+        return self.beam[index]
+
+    def __setitem__(self, key, item):
+        self.beam[key] = item
+
+    def getlmax(self):
+        return self._lmax
+
+    def setlmax(self, lmax):
+        if self._lmax is not None:
+            raise ValueError("Lmax is immutable")
+        if not isinstance(lmax, int):
+            raise TypeError("lmax must be an integer")
+        self._lmax = lmax
+
+    lmax = property(getlmax, setlmax)
 
     def getbeam(self):
         return self._beam

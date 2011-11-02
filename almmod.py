@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import beammod
 
 _l2m = {}
 _m2l = {}
@@ -126,12 +127,64 @@ class AlmData(object):
             raise ValueError("Alms not compatible for adding")
 
     def __mul__(self, other):
-        if _compatible(self, other):
-            return AlmData(lmax=self.lmax, ordering=self.ordering, 
-                           ind_axis=self.ind_axis, pol_axis=self.pol_axis,
-                           pol_iter=self.pol_iter, alms=self.alms * other.alms)
+        if isinstance(other, AlmData):
+            if _compatible(self, other):
+                return AlmData(lmax=self.lmax, ordering=self.ordering, 
+                            ind_axis=self.ind_axis, pol_axis=self.pol_axis,
+                            pol_iter=self.pol_iter, alms=self.alms * other.alms)
+            else:
+                raise ValueError("Alms not compatible for multiplying")
+        elif isinstance(other, beammod.BeamData):
+            if (self.lmax <= other.lmax):
+                if self.pol_axis is not None:
+                    if not other.pol:
+                        raise ValueError("Beam is not polarized, but alms is")
+                    nalms = np.zeros(self.alms.shape, dtype=np.complex)
+                    for i in range(3):
+                        for l in range(self.lmax + 1):
+                            if other.beam_axis == 0:
+                                bsl = other.beam[l, i]
+                            elif other.beam_axis == 1:
+                                bsl = other.beam[i, l]
+                            for m in range(l):
+                                ind = lm2ind((l, m), 
+                                              lmmax=(self.lmax, self.mmax),
+                                              ordering=self.ordering)
+                                if self.pol_axis < self.ind_axis:
+                                    sl = (slice(None),) * self.pol_axis + \
+                                            (i,) + (slice(None),) * \
+                                            (self.ind_axis - self.pol_axis - \
+                                            1) + (ind,) + (Ellipsis,)
+                                elif self.ind_axis > self.pol_axis:
+                                    sl = (slice(None),) * self.ind_axis + \
+                                            (ind,) + (slice(None,)) * \
+                                            (self.pol_axis - self.ind_axis - \
+                                            1) + (i,) + (Ellipsis,)
+                                nalms[sl] = self.alms[sl] * bsl
+                else:
+                    for l in range(self.lmax + 1):
+                        if other.beam.ndim == 1:
+                            bsl = other.beam[l]
+                        else:
+                            if other.beam_axis == 0:
+                                bsl = other.beam[l, 0]
+                            elif other.beam_axis == 1:
+                                bsl = other.beam[0, l]
+                            for m in range(l):
+                                ind = lm2ind((l, m), 
+                                              lmmax=(self.lmax, self.mmax),
+                                              ordering=self.ordering)
+                                sl = (slice(None),) * self.ind_axis + \
+                                             (i,) + (Ellipsis,)
+                                nalms[sl] = self.alms[sl] * bsl
+                return AlmData(lmax=self.lmax, ordering=self.ordering, 
+                                ind_axis=self.ind_axis, pol_axis=self.pol_axis,
+                                pol_iter=self.pol_iter, alms=nalms)
+            else:
+                raise ValueError("lmax is less for beam than for alms")
+
         else:
-            raise ValueError("Alms not compatible for multiplying")
+            raise TypeError("Cannot multiply alms by this type")
 
     def __sub__(self, other):
         if _compatible(self, other):

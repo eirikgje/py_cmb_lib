@@ -12,10 +12,10 @@ def shaperange(shape, dtype=float):
     return srange.copy()
 
 def test_gaussbeam():
-    beam = beammod.gaussbeam(10.0, 95, ndim=1)
-    yield eq_, ['TT'], beam.spectra
-    beam = beammod.gaussbeam(10.0, 95, ndim=4)
-    yield eq_, ['TT', 'EE', 'BB', 'TE'], beam.spectra
+    beam = beammod.gaussbeam(10.0, 95, pol=False)
+    yield eq_, (96, 1), beam.beam.shape
+    beam = beammod.gaussbeam(10.0, 95, pol=True)
+    yield eq_, (96, 3), beam.beam.shape
 
 lmax = 90
 nels = lmax + 1

@@ -3,8 +3,9 @@ import numpy as np
 import pyfits
 import mapmod
 import almmod
+import beammod
 
-def read_file(fname, type=None, **kwargs):
+def read_file(fname, type=None):
     if fname.endswith('.fits'):
         #This will expand as need arises, for now, pretty ad-hoc
         hdulist = pyfits.open(fname)
@@ -66,6 +67,21 @@ def read_file(fname, type=None, **kwargs):
                 objdata = objdata + 1
             else:
                 raise NotImplementedError()
+        elif type.lower() == 'beam':
+            if len(hdulist) == 2:
+                data = hdulist[1].data
+                hdr = hdulist[1].header
+                if hdr['polar']:
+                    shape = (3, hdr['NAXIS2'])
+                else:
+                    shape = (1, hdr['NAXIS2'])
+                objdata = beammod.BeamData(lmax=hdr['NAXIS2'] - 1,
+                                           beam=np.zeros(shape),
+                                           pol=hdr['polar'])
+                for i in range(shape[0]):
+                    objdata[i, :] = data.field(i)
+            else:
+                raise NotImplementedError()
         else:
             raise NotImplementedError()
         hdulist.close()
@@ -74,6 +90,13 @@ def read_file(fname, type=None, **kwargs):
     return objdata
 
 def determine_type_fits(hdulist, fname):
+    if fname.startswith('weight_ring_n'):
+        return 'weight_ring'
+    if fname.startswith('pixel_window_n'):
+        return 'cls'
+    if 'beam' in fname.lower():
+        return 'beam'
+
     if len(hdulist) >= 2:
         #Assume extension
         exthdr = hdulist[1].header
@@ -87,7 +110,7 @@ def determine_type_fits(hdulist, fname):
             elif exthdr['EXTNAME'].startswith('ANALYSED A_LMS'):
                 return 'alms'
             elif exthdr['EXTNAME'] == 'PIXEL WINDOW':
-                return 'cls'
+                return 'beam'
             elif exthdr['EXTNAME'] == 'SIMULATED MAP':
                 return 'map'
         if 'CREATOR' in exthdr:
@@ -95,11 +118,6 @@ def determine_type_fits(hdulist, fname):
                 return 'weight_ring'
         if 'WEIGHTS' in exthdr['TTYPE1']:
             return 'weight_ring'
-        
-        if fname.beginswith('weight_ring_n'):
-            return 'weight_ring'
-        if fname.beginswith('pixel_window_n'):
-            return 'cls'
 
         #If things progress down here, it gets a little dirty
         if 'MAX-LPOL' in exthdr:
