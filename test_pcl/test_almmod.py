@@ -1,5 +1,6 @@
 from __future__ import division
 import almmod
+import beammod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
 import sys
@@ -442,3 +443,7 @@ def test_operators():
     ad[87] = 245.23
     yield eq_, ad[87], 245.23
     yield eq_, ad.shape, ad.alms.shape
+    beam = cls
+    bd = beammod.BeamData(lmax=lmax, beam=beam)
+    for l in range(lmax + 1):
+
