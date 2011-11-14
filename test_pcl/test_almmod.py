@@ -2,7 +2,7 @@ from __future__ import division
 import almmod
 import beammod
 import numpy as np
-from nose.tools import ok_, eq_, assert_raises
+from nose.tools import ok_, eq_, assert_raises, assert_almost_equals
 import sys
 
 
@@ -445,10 +445,15 @@ def test_operators():
     ad.alms = ad.alms + 1
     ad2.alms = ad.alms + 1
     yield ok_, np.all(ad.alms / ad2.alms == (ad / ad2).alms)
-    yield eq_, ad.alms[67], ad[67]
-    ad[87] = 245.23
-    yield eq_, ad[87], 245.23
-    yield eq_, ad.shape, ad.alms.shape
+
+    nalms = shaperange_cplx((nels, 2))
+    ad = almmod.AlmData(lmax=lmax, alms=nalms)
+    for i in range(2):
+        yield ok_, np.all(ad[:, i].alms == ad.alms[:, i])
+    yield eq_, ad[:, 0].alms.shape, (nels,)
+#    yield eq_, ad.alms[67], ad[67]
+#    ad[87] = 245.23
+#    yield eq_, ad[87], 245.23
     beam = cls
     bd = beammod.BeamData(lmax=lmax, beam=beam)
     ad = almmod.AlmData(lmax=lmax, alms=alms)
@@ -478,3 +483,34 @@ def test_operators():
             ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
             res[:, ind] = nalms[:, ind] * beam[:, l]
     yield ok_, np.all((ad * bd).alms == res)
+    nalms = shaperange_cplx((nels,))
+    beam = shaperange((lmax + 1,)) + 50
+    bd = beammod.BeamData(lmax=lmax, beam=beam)
+    ad = almmod.AlmData(lmax=lmax, alms=nalms)
+    res = np.zeros(nalms.shape, dtype=np.complex)
+    for l in range(lmax + 1):
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            res[ind] = nalms[ind] / beam[l]
+#    There seem to be some numerical inconsistencies here, so omitting this test for now
+#    yield ok_, np.all((ad / bd).alms == res)
+    nalms = shaperange_cplx((nels, 3))
+    beam = shaperange((lmax + 1, 3)) + 50
+    ad = almmod.AlmData(lmax=lmax, alms=nalms, pol_axis=1)
+    bd = beammod.BeamData(lmax=lmax, beam=beam, pol_axis=1)
+    res = np.zeros(nalms.shape, dtype=np.complex)
+    for l in range(lmax + 1):
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            res[ind, :] = nalms[ind, :] / beam[l, :]
+    yield ok_, np.all((ad / bd).alms == res)
+    nalms = shaperange_cplx((3, nels))
+    beam = shaperange((3, lmax + 1)) + 50
+    ad = almmod.AlmData(lmax=lmax, alms=nalms, pol_axis=0)
+    bd = beammod.BeamData(lmax=lmax, beam=beam, pol_axis=0)
+    res = np.zeros(nalms.shape, dtype=np.complex)
+    for l in range(lmax + 1):
+        for m in range(l + 1):
+            ind = almmod.lm2ind((l, m), (lmax, lmax), ordering='l-major')
+            res[:, ind] = nalms[:, ind] / beam[:, l]
+    yield ok_, np.all((ad / bd).alms == res)

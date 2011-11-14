@@ -330,7 +330,8 @@ def test_operators():
     md.map = md.map + 1
     md2.map = md.map + 1
     yield ok_, np.all(md.map / md2.map == (md / md2).map)
-    yield eq_, md.map[67], md[67]
-    md[87] = 245.23
-    yield eq_, md[87], 245.23
-    yield eq_, md.shape, md.map.shape
+    nmap = shaperange((npix, 5))
+    md = mapmod.MapData(nside=nside, map=nmap)
+    for i in range(5):
+        yield ok_, np.all(md[:, i].map == md.map[:, i])
+    yield eq_, md[:, 0].map.shape, (npix,)

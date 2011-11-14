@@ -7,6 +7,7 @@ import fileutils
 import psht
 import subprocess
 import shlex
+import tempfile
 
 def alm2map(ad, nside):
     """Determines (from whether pol_axis is set or not) whether or not to use
@@ -53,30 +54,54 @@ def map2alm(md, lmax, mmax=None, weights=None):
                         pol_iter=md.pol_iter, ordering='m-major')
     return ad
 
-def plot(md, signal='all'):
-    """Uses map2gif to plot a MapData map"""
-    subprocess.call(shlex.split("rm zokozokomap.fits"))
-    subprocess.call(shlex.split("rm zokozokomap.gif"))
-    subprocess.call(shlex.split("rm zokozokomap2.gif"))
-    subprocess.call(shlex.split("rm zokozokomap3.gif"))
-    fileutils.write_file('zokozokomap.fits', md)
-    if signal == 'all':
-        subprocess.call(shlex.split("map2gif -inp zokozokomap.fits -out zokozokomap.gif -bar true"))
-        subprocess.call(shlex.split("map2gif -inp zokozokomap.fits -out zokozokomap2.gif -bar true -sig 2"))
-        subprocess.call(shlex.split("map2gif -inp zokozokomap.fits -out zokozokomap3.gif -bar true -sig 3"))
-        subprocess.call(shlex.split("eog zokozokomap.gif &"))
+def plot(md, sig=(1,), min=None, max=None, prefix=None, ncols=None, 
+         common_bar=True):
+    """Uses map2png to plot a MapData map"""
+
+    if prefix is None:
+        prefix = 'testmap'
+
+    ffile = prefix + '.fits'
+    pfile = prefix + '.png'
+#    if common_bar or len(sig) == 1:
+#        subprocess.call(shlex.split("rm " + ffile))
+#        fileutils.write_file(ffile, md)
+#        flags = []
+#        if max is not None: flags.append('-max %f ' % max)
+#        if min is not None: flags.append('-min %f ' % min)
+#        for sigs in sig:
+#            flags.append('-sig %2d ' % sigs)
+#        if ncols is None:
+#            ncols = int(np.sqrt(len(sig)))
+#            flags.append('-ncol %2d' % ncols)
+#        subprocess.call(shlex.split("map2png " + ffile + " " + pfile + 
+#            " -bar  %s " % ''.join(flags)))
+#        subprocess.call(shlex.split("eog " + pfile))
+#    else:
+    filelist = []
+    for i in range(len(sig)):
+        tffile = prefix +  '%02d.fits' % i
+        tpfile = prefix + '%02d.png' % i
+        filelist.append(tpfile)
+        subprocess.call(shlex.split("rm " + tffile))
+        fileutils.write_file(tffile, md, sig=(sig[i],))
+        flags = []
+        if max is not None: flags.append('-max %f ' % max[i])
+        if min is not None: flags.append('-min %f ' % min[i])
+        subprocess.call(shlex.split("map2png " + tffile + " " + tpfile + 
+            " -bar  %s " % ''.join(flags)))
+
+    subprocess.call(shlex.split("rm " + pfile))
+    subprocess.call(shlex.split("montage -geometry 1024x535 %s " % ''.join(filelist) + pfile))
+    subprocess.call(shlex.split("eog " + pfile))
 
 def map2gif(md, signal='all', prefix='testmap'):
     subprocess.call(shlex.split("rm " + prefix + '.fits'))
     subprocess.call(shlex.split("rm " + prefix + '.gif'))
-    subprocess.call(shlex.split("rm " + prefix + '2.gif'))
-    subprocess.call(shlex.split("rm " + prefix + '3.gif'))
     fileutils.write_file(prefix + '.fits', md)
     if signal == 'all':
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + ".gif -bar true"))
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "2.gif -bar true -sig 2"))
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "3.gif -bar true -sig 3"))
 
-
-#def draw_gaussian_map(nside):
-#    npix = 12 * nside ** 2
+#def map2png(md, signal='all', prefix='testmap')

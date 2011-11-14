@@ -5,6 +5,9 @@ import mapmod
 import almmod
 import beammod
 
+_HPIX_BAD_DATA = -1.6375e30
+_HPIX_MODIFY_VAL = -4e29
+
 def read_file(fname, type=None):
     if fname.endswith('.fits'):
         #This will expand as need arises, for now, pretty ad-hoc
@@ -18,18 +21,61 @@ def read_file(fname, type=None):
                 hdr = hdulist[1].header
                 nside = hdr['nside']
                 npix = 12*nside*nside
-                if hdr['polar']:
-                    shape = (3, npix)
+                if 'polar' in hdr:
+                    if hdr['polar']:
+                        shape = (3, npix)
+                    else:
+                        shape = (npix,)
                 else:
-                    shape = (npix,)
+                    shape = (hdr['TFIELDS'], npix)
+                    
                 objdata = mapmod.MapData(nside, ordering=hdr['ordering'], 
                                         map=np.zeros(shape))
-                if hdr['polar']:
-                    for i in range(3):
-                        objdata.map[i] = data.field(i).flatten()
-                    objdata.pol_axis = 0
+                if 'polar' in hdr:
+                    if hdr['polar']:
+                        for i in range(3):
+                            objdata.map[i] = data.field(i).flatten()
+                        objdata.pol_axis = 0
+                    else:
+                        for i in range(hdr['TFIELDS']):
+                            #Saves the data in muK as default
+                            if cols[i].unit in ('K_CMB', 'K'):
+                                fac = 1e6
+                            elif cols[i].unit in ('(K_CMB)^2',):
+                                fac = 1e12
+                            elif cols[i].unit in ('N_hit', 'unknown'):
+                                fac = 1
+                            else:
+                                raise ValueError("Unknown unit")
+                            objdata.map[i] = (data.field(i).flatten()).astype(np.float64)
+                            objdata.map[i, data.field(i).flatten() == 
+                                        float(hdr['bad_data'])] = np.nan
+            #                        objdata.map[i, objdata.map[i] > 
+#                                    float(hdr['bad_data'])] = \
+#                                    objdata.map[i, objdata.map[i] > 
+#                                    float(hdr['bad_data'])] * fac
+
                 else:
-                    objdata.map = data.field(i).flatten()
+                    for i in range(hdr['TFIELDS']):
+                        #Saves the data in muK as default
+                        if cols[i].unit in ('K_CMB', 'K'):
+                            fac = 1e6
+                        elif cols[i].unit in ('(K_CMB)^2',):
+                            fac = 1e12
+                        elif cols[i].unit in ('N_hit', 'unknown'):
+                            fac = 1
+                        else:
+                            raise ValueError("Unknown unit")
+                        objdata.map[i] = (data.field(i).flatten()).astype(np.float64)
+#                        objdata.map[i, data.field(i).flatten() == 
+#                                    float(hdr['bad_data'])] = \
+#                                    float(hdr['bad_data'])
+                        objdata.map[i, data.field(i).flatten() <
+                                    _HPIX_BAD_DATA - _HPIX_MODIFY_VAL] = np.nan
+#                        objdata.map[i, objdata.map[i] > 
+#                                    float(hdr['bad_data'])] = \
+#                                    objdata.map[i, objdata.map[i] > 
+#                                    float(hdr['bad_data'])] * fac
             else:
                 raise NotImplementedError()
         elif type.lower() == 'alms':
@@ -139,52 +185,109 @@ def determine_type_fits(hdulist, fname):
         raise NotImplementedError()
     raise TypeError("Cannot determine fits data type")
 
-def write_file(fname, data, bintab=True):
+def write_file(fname, data, bintab=True, table_header=None, divide_data=False, names=None, bad_data=None, sig=None):
     if fname.endswith('.fits'):
         if isinstance(data, mapmod.MapData):
             if bintab:
-                if data.nside <= 8:
-                    raise NotImplementedError("""Nside must be at least 16 at 
-                                                this point""")
-                npix = 12*data.nside**2
-                if npix % 1024 != 0:
-                    raise NotImplementedError("npix must be a multiple of 1024")
-                numrows = npix // 1024
-                if data.pol_axis is not None:
-                    pol = True
-                    if len(data.map.shape) != 2:
-                        raise NotImplementedError()
-                    cols = []
-                    for i in range(3):
-                        if i == 0:
-                            name = 'TEMPERATURE'
-                        elif i == 1:
-                            name = 'Q-POLARISATION'
-                        elif i == 2:
-                            name = 'U-POLARISATION'
-                        cols.append(pyfits.Column(name=name, format='1024E', 
-                                            array = data.map[(Ellipsis,) * 
-                                            data.pol_axis + (i,) + (Ellipsis,) *
-                                            (data.map.ndim - 1 - 
-                                            data.pol_axis)].reshape(numrows, 
-                                                                   1024)))
+                if divide_data:
+                    #This should preferrably not be used, it is obsolete. 
+                    #It divides the map into chunks of 1024 pixels and makes a 
+                    #new record for each chunk, but also assumes a specific 
+                    #shape for the input map
+                    if data.nside <= 8:
+                        raise NotImplementedError("""Nside must be at least 16 at 
+                                                    this point""")
+                    npix = 12*data.nside**2
+                    if npix % 1024 != 0:
+                        raise NotImplementedError("npix must be a multiple of 1024")
+                    numrows = npix // 1024
+                    if data.pol_axis is not None:
+                        pol = True
+                        if len(data.map.shape) != 2:
+                            raise NotImplementedError()
+                        cols = []
+                        for i in range(3):
+                            if i == 0:
+                                name = 'TEMPERATURE'
+                            elif i == 1:
+                                name = 'Q-POLARISATION'
+                            elif i == 2:
+                                name = 'U-POLARISATION'
+                            cols.append(pyfits.Column(name=name, format='1024E',
+                                        array = data.map[(Ellipsis,) * 
+                                        data.pol_axis + (i,) + (Ellipsis,) *
+                                        (data.map.ndim - 1 - 
+                                        data.pol_axis)].reshape(numrows, 1024)))
+                    else:
+                        pol = False
+                        if (len(data.map.shape)) != 1:
+                            raise NotImplementedError()
+                        cols = [pyfits.Column(name='TEMPERATURE', 
+                                              format='1024E', 
+                                              array=data.map.reshape(numrows, 
+                                              1024))]
+                    cols = pyfits.ColDefs(cols)
+                    prihdu = pyfits.PrimaryHDU()
+                    tbhdu = pyfits.new_table(cols)
+                    thdr = tbhdu.header
+                    thdr.update('NSIDE', data.nside, 
+                                'Resolution parameter for HEALPIX')
+                    thdr.update('ORDERING', data.ordering.upper(), 
+                                'Pixel ordering scheme, either RING or NESTED')
+                    thdr.update('POLAR', pol, 
+                                'Polarisation included (True/False)')
+                    thdr.update('EXTNAME', 'HEALPIX MAP', 'HEALPix map')
+                    thdulist = pyfits.HDUList([prihdu, tbhdu])
                 else:
-                    pol = False
-                    if (len(data.map.shape)) != 1:
-                        raise NotImplementedError()
-                    cols = [pyfits.Column(name='TEMPERATURE', format='1024E',
-                                        array=data.map.reshape(numrows, 1024))]
-                cols = pyfits.ColDefs(cols)
-                prihdu = pyfits.PrimaryHDU()
-                tbhdu = pyfits.new_table(cols)
-                thdr = tbhdu.header
-                thdr.update('NSIDE', data.nside, 
-                            'Resolution parameter for HEALPIX')
-                thdr.update('ORDERING', data.ordering.upper(), 
-                            'Pixel ordering scheme, either RING or NESTED')
-                thdr.update('POLAR', pol, 'Polarisation included (True/False)')
-                thdr.update('EXTNAME', 'HEALPIX MAP', 'HEALPix map')
-                thdulist = pyfits.HDUList([prihdu, tbhdu])
+                    if len(data.map.shape) == 1:
+                        nmaps = 1
+                    else:
+                        nmaps = sum(data.map.shape[:data.pix_axis]) + \
+                                sum(data.map.shape[data.pix_axis + 1:])
+                    if names is None:
+                        names = ["MAP%1d" % i for i in range(nmaps)]
+                    else:
+                        if len(names) != nmaps:
+                            raise ValueError("Length of name array must be "
+                                             "same as number of maps")
+                    npix = 12 * data.nside ** 2
+                    data.pol_iter = False
+                    cols = []
+                    i = 0
+                    if sig is not None: 
+                        j = 0
+                    for map in data:
+                        if sig is None:
+                            cols.append(pyfits.Column(name=names[i], 
+                                                    format='1E', array=map))
+                        else:
+                            if (i + 1) in sig:
+                                cols.append(pyfits.Column(name=names[j], 
+                                                    format='1E', array=map))
+                                j +=1
+                        i += 1
+                    if data.pol_axis is None:
+                        pol = False
+                    else:
+                        pol = True
+                    cols = pyfits.ColDefs(cols)
+                    prihdu = pyfits.PrimaryHDU()
+                    tbhdu = pyfits.new_table(cols)
+                    thdr = tbhdu.header
+                    thdr.update('NSIDE', data.nside, 
+                                'Resolution parameter for HEALPIX')
+                    thdr.update('ORDERING', data.ordering.upper(), 
+                                'Pixel ordering scheme, either RING or NESTED')
+                    thdr.update('POLAR', pol, 
+                                'Polarisation included (True/False)')
+                    thdr.update('EXTNAME', 'HEALPIX MAP', 'HEALPix map')
+                    if bad_data is None:
+                        bad_data = _HPIX_BAD_DATA
+                    thdr.update('BAD_DATA', bad_data, 
+                                'Sentinel value given to bad pixels')
+                    thdr.update('BLANK', bad_data, 
+                                'Sentinel value given to bad pixels')
+                    thdulist = pyfits.HDUList([prihdu, tbhdu])
             else:
                 raise NotImplementedError()
         elif isinstance(data, almmod.ClData):

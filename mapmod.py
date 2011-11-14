@@ -337,10 +337,9 @@ class MapData(object):
             raise ValueError("Maps not compatible for dividing")
 
     def __getitem__(self, index):
-        return self.map[index]
-
-    def __setitem__(self, key, item):
-        self.map[key] = item
+        return MapData(nside=self.nside, ordering=self.ordering, 
+                       pix_axis=self.pix_axis, pol_axis=self.pol_axis, 
+                       pol_iter=self.pol_iter, map=self.map[index])
 
     def getmap(self):
         return self._map
@@ -361,11 +360,6 @@ class MapData(object):
         self._map = map
 
     map = property(getmap, setmap)
-
-    def getshape(self):
-        return self.map.shape
-
-    shape = property(getshape)
 
     def getordering(self):
         return self._ordering
