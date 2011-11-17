@@ -82,7 +82,7 @@ def plot(md, sig=(1,), min=None, max=None, prefix=None, ncols=None,
     for i in range(len(sig)):
         tffile = prefix +  '%02d.fits' % i
         tpfile = prefix + '%02d.png' % i
-        filelist.append(tpfile)
+        filelist.append(tpfile + ' ')
         subprocess.call(shlex.split("rm " + tffile))
         fileutils.write_file(tffile, md, sig=(sig[i],))
         flags = []
@@ -92,7 +92,7 @@ def plot(md, sig=(1,), min=None, max=None, prefix=None, ncols=None,
             " -bar  %s " % ''.join(flags)))
 
     subprocess.call(shlex.split("rm " + pfile))
-    subprocess.call(shlex.split("montage -geometry 1024x535 %s " % ''.join(filelist) + pfile))
+    subprocess.call(shlex.split("montage -geometry +0+0 %s " % ''.join(filelist) + pfile))
     subprocess.call(shlex.split("eog " + pfile))
 
 def map2gif(md, signal='all', prefix='testmap'):
@@ -103,5 +103,3 @@ def map2gif(md, signal='all', prefix='testmap'):
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + ".gif -bar true"))
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "2.gif -bar true -sig 2"))
         subprocess.call(shlex.split("map2gif -inp " + prefix + ".fits -out " + prefix + "3.gif -bar true -sig 3"))
-
-#def map2png(md, signal='all', prefix='testmap')

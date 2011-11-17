@@ -337,9 +337,13 @@ class MapData(object):
             raise ValueError("Maps not compatible for dividing")
 
     def __getitem__(self, index):
-        return MapData(nside=self.nside, ordering=self.ordering, 
-                       pix_axis=self.pix_axis, pol_axis=self.pol_axis, 
+        n = MapData(nside=self.nside, ordering=self.ordering, 
                        pol_iter=self.pol_iter, map=self.map[index])
+        if n.pix_axis == self.pix_axis or self.pol_axis is None:
+            n.pol_axis = self.pol_axis
+        else:
+            n.pol_axis = None
+        return n
 
     def getmap(self):
         return self._map

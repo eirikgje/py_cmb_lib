@@ -335,3 +335,9 @@ def test_operators():
     for i in range(5):
         yield ok_, np.all(md[:, i].map == md.map[:, i])
     yield eq_, md[:, 0].map.shape, (npix,)
+    #Different pixel axs in the resulting map
+    nmap = shaperange((3, npix))
+    md = mapmod.MapData(nside=nside, map=nmap)
+    for i in range(3):
+        yield ok_, np.all(md[i].map == md.map[i])
+    yield eq_, md[0].map.shape, (npix,)
