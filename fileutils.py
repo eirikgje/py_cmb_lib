@@ -159,6 +159,8 @@ def determine_type_fits(hdulist, fname):
                 return 'beam'
             elif exthdr['EXTNAME'] == 'SIMULATED MAP':
                 return 'map'
+            elif exthdr['EXTNAME'] == 'BEAM':
+                return 'beam'
         if 'CREATOR' in exthdr:
             if exthdr['CREATOR'] == 'QUAD_RING':
                 return 'weight_ring'
@@ -329,6 +331,40 @@ def write_file(fname, data, bintab=True, table_header=None, divide_data=False, n
                     thdr = tbhdu.header
                     thdr.update('EXTNAME', 'POWER SPECTRUM', 
                                 'Power spectrum : C(l)')
+                    thdr.update('POLAR', pol,
+                                'Polarisation included (True/False)')
+                    thdr.update('MAX-LPOL', data.lmax, 'Maximum L multipole')
+                    thdulist = pyfits.HDUList([prihdu, tbhdu])
+                else:
+                    raise NotImplementedError()
+        elif isinstance(data, beammod.BeamData):
+            if bintab:
+                raise NotImplementedError()
+            else:
+                if data.pol_axis is None or data.beam.shape[data.pol_axis] == 1:
+                    pol = False
+                else:
+                    pol = True
+                if pol:
+                    cols = []
+                    for i in range(3):
+                        if i == 0:
+                            name = 'T'
+                        elif i == 1:
+                            name = 'E'
+                        elif i == 2:
+                            name = 'B'
+                        if data.beam_axis == 0:
+                            array = data.beam[:, i]
+                        elif data.beam_axis == 1:
+                            array = data.beam[i]
+                        cols.append(pyfits.Column(name=name, format='E24.15', array=array))
+                    cols = pyfits.ColDefs(cols, tbtype="TableHDU")
+                    prihdu = pyfits.PrimaryHDU()
+                    tbhdu = pyfits.new_table(cols, tbtype='TableHDU')
+                    thdr = tbhdu.header
+                    thdr.update('EXTNAME', 'BEAM', 
+                                'Beam : b(l)')
                     thdr.update('POLAR', pol,
                                 'Polarisation included (True/False)')
                     thdr.update('MAX-LPOL', data.lmax, 'Maximum L multipole')

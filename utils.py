@@ -82,7 +82,7 @@ def plot(md, sig=(1,), min=None, max=None, prefix=None, ncols=None,
     for i in range(len(sig)):
         tffile = prefix +  '%02d.fits' % i
         tpfile = prefix + '%02d.png' % i
-        filelist.append(tpfile)
+        filelist.append(tpfile + ' ')
         subprocess.call(shlex.split("rm " + tffile))
         fileutils.write_file(tffile, md, sig=(sig[i],))
         flags = []

@@ -6,10 +6,22 @@ from versionmod import bin, any, all
 
 _r2n = {}
 _n2r = {}
+_pix2ang_r = {}
+_pix2ang_n = {}
 _pix2x = None
 _pix2y = None
 _x2pix = None
 _y2pix = None
+
+def _init_pix2ang(nside, order):
+    pass
+#    global _pix2ang_r
+#    global _pix2ang_n
+#    
+#    npix = 12 * nside ** 2
+#    if order == 'ring':
+#        if _pix2ang_n.has_key(nside):
+
 
 def _init_r2n(nside):
     global _r2n
