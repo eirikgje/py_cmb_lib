@@ -14,14 +14,43 @@ _x2pix = None
 _y2pix = None
 
 def _init_pix2ang(nside, order):
-    pass
-#    global _pix2ang_r
-#    global _pix2ang_n
-#    
-#    npix = 12 * nside ** 2
-#    if order == 'ring':
-#        if _pix2ang_n.has_key(nside):
+#    pass
+    global _pix2ang_r
+    global _pix2ang_n
+    
+    npix = 12 * nside ** 2
+    if order == 'ring':
+        if _pix2ang_n.has_key(nside):
+            pass
+            #TODO ring2nest og saa tilbake
+    elif order == 'nested':
+        if _pix2ang_r.has_key(nside):
+            pass
+            #TODO omvendt
+    pixs = np.arange(npix)
+    nl2 = 2 * nside
+    nl4 = 4 * nside
+    ncap = nl2 * (nside - 1)
+#    ip = np.zeros(npix, int)
+#    irs = np.zeros(npix, int)
+#    iphi = np.zeros(npix, int)
+#    iring = np.zeros(npix, int)
+    theta = np.zeros(npix)
+    phi = np.zeros(npix)
 
+    #South polar cap
+    filter = pixs >= npix - ncap
+    ip = npix - pixs[filter]
+    iring = (np.sqrt(ip * 0.5).round()).astype(int)
+    iphi = 2 * iring * (iring + 1) - ip
+    iring, iphi = _correct_ring_phi(-1, iring, iphi)
+    theta[filter] = np.arccos((iring / nside) ** 2 / 3.0 - 1.0)
+    phi[filter] = (iphi + 0.5) * np.pi * 0.5 / iring
+
+    filter = pixs < npix - ncap
+    ip = pixs[filter] - ncap
+    iring = (ip / nl4).astype(int) + nside
+    iphi = ip % (nl4 - 1)
 
 def _init_r2n(nside):
     global _r2n
