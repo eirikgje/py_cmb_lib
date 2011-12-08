@@ -45,6 +45,8 @@ def read_file(fname, type=None):
                                 fac = 1e12
                             elif cols[i].unit in ('N_hit', 'unknown'):
                                 fac = 1
+                            elif cols[i].unit is None:
+                                fac = 1
                             else:
                                 raise ValueError("Unknown unit")
                             objdata.map[i] = (data.field(i).flatten()).astype(np.float64)
@@ -63,6 +65,8 @@ def read_file(fname, type=None):
                         elif cols[i].unit in ('(K_CMB)^2',):
                             fac = 1e12
                         elif cols[i].unit in ('N_hit', 'unknown'):
+                            fac = 1
+                        elif cols[i].unit is None:
                             fac = 1
                         else:
                             raise ValueError("Unknown unit")
@@ -121,11 +125,15 @@ def read_file(fname, type=None):
                     shape = (3, hdr['NAXIS2'])
                 else:
                     shape = (1, hdr['NAXIS2'])
-                objdata = beammod.BeamData(lmax=hdr['NAXIS2'] - 1,
-                                           beam=np.zeros(shape),
-                                           pol=hdr['polar'])
+                if hdr['polar']:
+                    objdata = beammod.BeamData(lmax=hdr['NAXIS2'] - 1,
+                                            beam=np.zeros(shape),
+                                            pol_axis=0)
+                else:
+                    objdata = beammod.BeamData(lmax=hdr['NAXIS2'] - 1,
+                                            beam=np.zeros(shape))
                 for i in range(shape[0]):
-                    objdata[i, :] = data.field(i)
+                    objdata.beam[i, :] = data.field(i)
             else:
                 raise NotImplementedError()
         else:
@@ -140,8 +148,6 @@ def determine_type_fits(hdulist, fname):
         return 'weight_ring'
     if fname.startswith('pixel_window_n'):
         return 'cls'
-    if 'beam' in fname.lower():
-        return 'beam'
 
     if len(hdulist) >= 2:
         #Assume extension
@@ -165,6 +171,7 @@ def determine_type_fits(hdulist, fname):
         if 'WEIGHTS' in exthdr['TTYPE1']:
             return 'weight_ring'
 
+
         #If things progress down here, it gets a little dirty
         if 'MAX-LPOL' in exthdr:
             if 'MAX-MPOL' in exthdr:
@@ -181,6 +188,8 @@ def determine_type_fits(hdulist, fname):
                     return 'cls'
             else:
                 return 'map'
+    elif 'beam' in fname.lower():
+        return 'beam'
     else:
         raise NotImplementedError()
     raise TypeError("Cannot determine fits data type")
