@@ -25,7 +25,10 @@ def read_file(fname, type=None):
                     if hdr['polar']:
                         shape = (3, npix)
                     else:
-                        shape = (npix,)
+                        if hdr['naxis2'] != 1:
+                            shape = (hdr['naxis2'], npix)
+                        else:
+                            shape = (npix,)
                 else:
                     shape = (hdr['TFIELDS'], npix)
                     
@@ -37,22 +40,44 @@ def read_file(fname, type=None):
                             objdata.map[i] = data.field(i).flatten()
                         objdata.pol_axis = 0
                     else:
-                        for i in range(hdr['TFIELDS']):
-                            #Saves the data in muK as default
-                            if cols[i].unit in ('K_CMB', 'K'):
+                        if hdr['naxis2'] != 1:
+                            if cols[0].unit in ('K_CMB', 'K'):
                                 fac = 1e6
-                            elif cols[i].unit in ('(K_CMB)^2',):
+                            elif cols[0].unit in ('(K_CMB)^2',):
                                 fac = 1e12
-                            elif cols[i].unit in ('N_hit', 'unknown'):
+                            elif cols[0].unit in ('N_hit', 'unknown'):
                                 fac = 1
-                            elif cols[i].unit is None:
+                            elif cols[0].unit == 'muK':
+                                fac = 1
+                            elif cols[0].unit is None:
                                 fac = 1
                             else:
+                                print cols[0].unit
                                 raise ValueError("Unknown unit")
-                            objdata.map[i] = (data.field(i).flatten()).astype(np.float64)
-                            objdata.map[i, data.field(i).flatten() == 
-                                        float(hdr['bad_data'])] = np.nan
-            #                        objdata.map[i, objdata.map[i] > 
+                            for i in range(hdr['naxis2']):
+                                print objdata.map[i].shape
+                                print data.field(0)[i].shape
+                                objdata.map[i] = data.field(0)[i].astype(np.float64)*fac
+                        else:
+                            for i in range(hdr['TFIELDS']):
+                            #Saves the data in muK as default
+                                if cols[i].unit in ('K_CMB', 'K'):
+                                    fac = 1e6
+                                elif cols[i].unit in ('(K_CMB)^2',):
+                                    fac = 1e12
+                                elif cols[i].unit in ('N_hit', 'unknown'):
+                                    fac = 1
+                                elif cols[i].unit == 'muK':
+                                    fac = 1
+                                elif cols[i].unit is None:
+                                    fac = 1
+                                else:
+                                    print cols[i].unit
+                                    raise ValueError("Unknown unit")
+                                objdata.map[i] = (data.field(i).flatten()).astype(np.float64)*fac
+                                objdata.map[i, data.field(i).flatten() == 
+                                            float(hdr['bad_data'])] = np.nan
+                #                        objdata.map[i, objdata.map[i] > 
 #                                    float(hdr['bad_data'])] = \
 #                                    objdata.map[i, objdata.map[i] > 
 #                                    float(hdr['bad_data'])] * fac
@@ -70,7 +95,7 @@ def read_file(fname, type=None):
                             fac = 1
                         else:
                             raise ValueError("Unknown unit")
-                        objdata.map[i] = (data.field(i).flatten()).astype(np.float64)
+                        objdata.map[i] = (data.field(i).flatten()).astype(np.float64)*fac
 #                        objdata.map[i, data.field(i).flatten() == 
 #                                    float(hdr['bad_data'])] = \
 #                                    float(hdr['bad_data'])
