@@ -3,17 +3,18 @@ import covmatmod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
 
-nside = 32
-npix = 12*nside**2
-mat = shaperange(npix, npix, dtype=np.double)
 
 def shaperange(shape, dtype=float):
     m = 1
     for s in shape:
         m = m * s
-    srange = shaperange(m, dtype=dtype)
+    srange = np.arange(m, dtype=dtype)
     srange = srange.reshape(shape)
     return srange.copy()
+
+nside = 8
+npix = 12*nside**2
+mat = shaperange((npix, npix), dtype=np.double)
 
 def test_sanity():
     md = covmatmod.CovMatData(nside=nside)
@@ -42,7 +43,7 @@ def test_init():
     yield assert_raises, TypeError, func
     #Given no mat, should initialize a mat of zeros with given nside
     md = covmatmod.CovMatData(nside=nside)
-    yield ok_, np.all(md.mat == np.zeros(npix, npix))
+    yield ok_, np.all(md.mat == np.zeros((npix, npix)))
     md = covmatmod.CovMatData(nside, mat=np.zeros((3, npix, npix, 4)))
     yield eq_, (3, npix, npix, 4), md.mat.shape
     md = covmatmod.CovMatData(nside, mat=np.zeros((3, 7, npix, npix)))
@@ -61,8 +62,10 @@ def test_assign():
     def func():
         md.nside = 12
     yield assert_raises, ValueError, func
+    #Ordering is immutable
+    md = covmatmod.CovMatData(nside, ordering='ring')
     def func():
-        md.ordering = 'neste'
+        md.ordering = 'nested'
     yield assert_raises, ValueError, func
     #Should be able to assign whichever mat as long as nside is correct
     md = covmatmod.CovMatData(nside)
@@ -140,7 +143,7 @@ def test_appendmats():
     def func():
         md.appendmats(mat, along_axis=2)
     yield assert_raises, ValueError, func
-    md.appendmats(mat, along_axis=4)
+    md.appendmats(mat, along_axis=5)
     yield eq_, (3, 4, npix, npix, 3, 2), md.mat.shape
 
 def test_iter():
@@ -157,20 +160,20 @@ def test_iter():
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
-    mat = shaperange(npix, dtype=float)
+    mat = shaperange((npix, npix), dtype=float)
     md = covmatmod.CovMatData(nside, mat=mat)
     for cmat in md:
         yield ok_, np.all(cmat == mat)
-    mat = shaperange((3, npix))
+    mat = shaperange((3, npix, npix))
     md = covmatmod.CovMatData(nside, mat=mat)
     currind = 0
     indlist = 3
     for cmat in md:
         yield ok_, np.all(mat[[currind,] + [Ellipsis,]] == cmat)
-        yield ok_, cmat.shape == (npix,)
+        yield ok_, cmat.shape == (npix, npix)
         currind += 1
     yield eq_, currind, 3
-    mat  = shaperange(npix)
+    mat  = shaperange((npix, npix))
     md = covmatmod.CovMatData(nside, mat=mat)
     currind = 0
     for cmat in md:
@@ -179,66 +182,84 @@ def test_iter():
     yield eq_, currind, 1
     #Keyword pol_iter=True should return (3, npix) or (npix, 3) - array for the
     #iterator
-    mat = shaperange((2, 3, npix))
+    mat = shaperange((2, 3, npix, npix))
     md = covmatmod.CovMatData(nside, mat=mat, pol_axis=1, pol_iter=True)
     currind = 0
     for cmat in md:
         yield ok_, np.all(mat[[currind,] + [Ellipsis,]] == cmat)
-        yield ok_, cmat.shape == (3, npix)
+        yield ok_, cmat.shape == (3, npix, npix)
         currind += 1
     yield eq_, currind, 2
-    mat = shaperange((5, npix, 3))
-    md = covmatmod.CovMatData(nside, mat=mat, pol_axis=2, pol_iter=True)
+    mat = shaperange((5, npix, npix, 3))
+    md = covmatmod.CovMatData(nside, mat=mat, pol_axis=3, pol_iter=True)
     currind = 0
     for cmat in md:
         yield ok_, np.all(mat[[currind,] + [Ellipsis,]] == cmat)
-        yield ok_, cmat.shape == (npix, 3)
+        yield ok_, cmat.shape == (npix, npix, 3)
         currind += 1
     yield eq_, currind, 5
-    mat = shaperange((5, npix, 6, 3, 3))
-    md = covmatmod.CovMatData(nside, mat=mat, pol_axis=3, pol_iter=True)
+    mat = shaperange((5, npix, npix, 6, 3, 3))
+    md = covmatmod.CovMatData(nside, mat=mat, pol_axis=4, pol_iter=True)
     currind = [0, 0, 0]
     indlist = [5, 6, 3]
     for cmat in md:
         yield ok_, np.all(mat[currind[:1] + [Ellipsis,] + currind[1:2] + 
-                        [Ellipsis,] + currind[2:]] == cmat)
-        yield ok_, cmat.shape == (npix, 3)
+                [Ellipsis,] + currind[2:]] == cmat)
+        yield ok_, cmat.shape == (npix, npix, 3)
         trace_ind = 2
         while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
-    mat = shaperange((4, 3, npix, 7, 1))
+    mat = shaperange((4, 3, npix, npix, 7, 1))
     md = covmatmod.CovMatData(nside, mat=mat, pol_axis=1, pol_iter=True)
     currind = [0, 0, 0]
     indlist = [4, 7, 1]
     for cmat in md:
         yield ok_, np.all(mat[currind[:1] + [Ellipsis,] + currind[1:]] == cmat)
-        yield ok_, cmat.shape == (3, npix)
+        yield ok_, cmat.shape == (3, npix, npix)
         trace_ind = 2
         while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
             currind[trace_ind] = 0
             trace_ind -= 1
         currind[trace_ind] += 1
 
+    mat = shaperange((4, 7, npix, npix, 3, 1))
+    md = covmatmod.CovMatData(nside, mat=mat, pol_axis=4, pol_iter=True)
+    currind = [0, 0, 0]
+    indlist = [4, 7, 1]
+    for cmat in md:
+        yield ok_, np.all(mat[currind[:2] + [Ellipsis,] + currind[2:]] == cmat)
+        yield ok_, cmat.shape == (npix, npix, 3)
+        trace_ind = 2
+        while indlist[trace_ind] == currind[trace_ind] + 1 and trace_ind != 0:
+            currind[trace_ind] = 0
+            trace_ind -= 1
+        currind[trace_ind] += 1
+
+
 def test_operators():
     md = covmatmod.CovMatData(nside=nside, mat=mat)
     md2 = covmatmod.CovMatData(nside=nside, mat=mat)
     yield ok_, np.all(md.mat + md2.mat == (md + md2).mat)
     yield ok_, np.all(md.mat + md.mat == (md + md).mat)
-    yield ok_, np.all(md.mat * md2.mat == (md * md2).mat)
+    #Multiplication not implemented yet
+    #yield ok_, np.all(md.mat * md2.mat == (md * md2).mat)
     yield ok_, np.all(md.mat - md2.mat == (md - md2).mat)
-    md.mat = md.mat + 1
-    md2.mat = md.mat + 1
-    yield ok_, np.all(md.mat / md2.mat == (md / md2).mat)
-    nmat = shaperange((npix, 5))
-    md = covmatmod.CovMatData(nside=nside, mat=nmat)
-    for i in range(5):
-        yield ok_, np.all(md[:, i].mat == md.mat[:, i])
-    yield eq_, md[:, 0].mat.shape, (npix,)
-    #Different pixel axs in the resulting mat
-    nmat = shaperange((3, npix))
-    md = covmatmod.CovMatData(nside=nside, mat=nmat)
-    for i in range(3):
-        yield ok_, np.all(md[i].mat == md.mat[i])
-    yield eq_, md[0].mat.shape, (npix,)
+    #Division not implemented yet
+    #md.mat = md.mat + 1
+    #md2.mat = md.mat + 1
+    #yield ok_, np.all(md.mat / md2.mat == (md / md2).mat)
+
+    #Getitem must be reimplemented to return a slice, not a copy
+    #nmat = shaperange((npix, npix, 5))
+    #md = covmatmod.CovMatData(nside=nside, mat=nmat)
+    #for i in range(5):
+    #    yield ok_, np.all(md[:, i].mat == md.mat[:, i])
+    #yield eq_, md[:, 0].mat.shape, (npix, npix)
+    #Different pixel axs in the resulting matrix
+    #nmat = shaperange((3, npix, npix))
+    #md = covmatmod.CovMatData(nside=nside, mat=nmat)
+    #for i in range(3):
+    #    yield ok_, np.all(md[i].mat == md.mat[i])
+    #yield eq_, md[0].mat.shape, (npix, npix)

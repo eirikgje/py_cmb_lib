@@ -1,6 +1,16 @@
 from __future__ import division
 import numpy as np
 
+#Very preliminary - so far, for two matrices to be compatible for *any*
+#operation they must have many common attributes
+def _compatible(md1, md2):
+    if (md1.nside != md2.nside or md1.mat.shape != md2.mat.shape or 
+        md1.pol_axis != md2.pol_axis or md1.pix_axis != md2.pix_axis or
+        md1.ordering != md2.ordering or md1.pol_iter != md2.pol_iter):
+        return False
+    else:
+        return True
+
 class CovMatData(object):
     """Class to store and pass relevant information about various types of 
         pixel-space covariance matrices. 
@@ -152,7 +162,7 @@ class CovMatData(object):
     pol_axis = property(getpol_axis, setpol_axis)
 
     def appendmats(self, mat, along_axis=0):
-        """Add one or several covariance matricess to object instance.
+        """Add one or several covariance matrices to object instance.
 
         The covariance matrices must be numpy arrays or CovMatData objects, 
         and along_axis
@@ -213,11 +223,12 @@ class _mat_iter(object):
         self._mat = md.mat
         self._pix_axis = md.pix_axis
         self._pol_axis = md.pol_axis
+        #Adjusts because we have one less dimension to iterate through
         if self._pol_iter:
             if self._pol_axis < self._pix_axis:
                 self._pix_axis -= 1
             else:
-                self._pol_axis -= 1
+                self._pol_axis -= 2
         #Copies subshape
         self._currind = list(self._subshape)
 
@@ -244,5 +255,5 @@ class _mat_iter(object):
                             + self._currind[self._pol_axis:self._pix_axis] 
                             + [Ellipsis,] + self._currind[self._pix_axis:]]
         else:
-            return self._mat[self._currind[:self._pix_axis] + [Ellipsis,] 
+            return self._mat[self._currind[:self._pix_axis] + 2*[Ellipsis,] 
                         + self._currind[self._pix_axis:]]
