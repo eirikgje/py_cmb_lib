@@ -1,5 +1,6 @@
 from __future__ import division
 import covmatmod
+import mapmod
 import numpy as np
 from nose.tools import ok_, eq_, assert_raises
 
@@ -263,3 +264,205 @@ def test_operators():
     #for i in range(3):
     #    yield ok_, np.all(md[i].mat == md.mat[i])
     #yield eq_, md[0].mat.shape, (npix, npix)
+
+def test_mask():
+    #Mask is ones and zeros
+    mat = shaperange((npix, npix))
+    mask = np.ones(npix) 
+    mask[5] = 0
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:5],  mask2map[6:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat)
+    mask2map = np.arange(npix)
+    #yield ok_, np.all(mask2map == md.mask2map)
+    yield ok_, md.mask2map is None
+    md.setmask(mask)
+    mask2map = np.append(mask2map[:5],  mask2map[6:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Let mask be matData object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=maskd)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:5],  mask2map[6:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat)
+    md.setmask(maskd)
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Mask is boolean array
+    mask = np.zeros(npix, dtype=bool)
+    mask[:] = True
+    mask[8] = False
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:8],  mask2map[9:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Mask is CovMatData object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=maskd)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:8],  mask2map[9:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat)
+    md.setmask(maskd)
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Mask is numpy array containing the pixels to be masked
+    mask = np.array([3, 6, 19, 54, 100])
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask)
+    mask2map=np.arange(npix)
+    mask2map = np.concatenate((mask2map[:3],  mask2map[4:6], mask2map[7:19],
+                                mask2map[20:54], mask2map[55:100],
+                                mask2map[101:]))
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Test multiple mats
+    mat = shaperange((4, npix, npix, 2))
+
+    #Mask is ones and zeros
+    mask = np.ones(npix) 
+    mask[5] = 0
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:5],  mask2map[6:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat)
+    mask2map = np.arange(npix)
+    #yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, md.mask2map is None
+    md.setmask(mask)
+    mask2map = np.append(mask2map[:5],  mask2map[6:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Let mask be CovMatData object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=maskd)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:5],  mask2map[6:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat)
+    md.setmask(maskd)
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Mask is boolean array
+    mask = np.zeros(npix, dtype=bool)
+    mask[:] = True
+    mask[8] = False
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:8],  mask2map[9:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Mask is CovMatData object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=maskd)
+    mask2map = np.arange(npix)
+    mask2map = np.append(mask2map[:8],  mask2map[9:])
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat)
+    md.setmask(maskd)
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Mask is numpy array containing the pixels to be masked
+    mask = np.array([3, 6, 19, 54, 100])
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask)
+    mask2map=np.arange(npix)
+    mask2map = np.concatenate((mask2map[:3], mask2map[4:6], mask2map[7:19], 
+                        mask2map[20:54], mask2map[55:100], 
+                        mask2map[101:]))
+    yield ok_, np.all(mask2map == md.mask2map[0, :md.npix_masked[0]])
+
+    #Test different masks for polarization
+    mat = shaperange((3, npix, npix))
+
+    #Mask is ones and zeros
+    mask = np.ones((3, npix)) 
+    mask[0, 5] = 0
+    mask[1, [6, 9, 15]] = 0
+    mask[2, [7, 9, 15, 90]] = 0
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask, pol_axis=0)
+    mask2map = np.arange(npix)
+    mask2mapT = np.append(mask2map[:5], mask2map[6:])
+    mask2mapQ = np.concatenate((mask2map[:6], mask2map[7:9], mask2map[10:15], 
+                            mask2map[16:]))
+    mask2mapU = np.concatenate((mask2map[:7], mask2map[8:9], mask2map[10:15], 
+                            mask2map[16:90], mask2map[91:]))
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat, pol_axis=0)
+    #yield ok_, np.all(mask2map[0] == md.mask2map[0])
+    #yield ok_, np.all(mask2map[1] == md.mask2map[1])
+    #yield ok_, np.all(mask2map[2] == md.mask2map[2])
+    yield ok_, md.mask2map is None
+    md.setmask(mask)
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    #Let mask be CovMatData object
+    maskd = mapmod.MapData(nside=nside, map=mask, pol_axis=0)
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=maskd, pol_axis=0)
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat, pol_axis=0)
+    md.setmask(maskd)
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    #Mask is boolean array
+    mask = np.zeros((3, npix), dtype=bool) 
+    mask[:] = True
+    mask[0, 5] = False
+    mask[1, [6, 9, 15]] = False
+    mask[2, [7, 9, 15, 90]] = False
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask, pol_axis=0)
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    #Mask is CovMatData object
+    maskd = mapmod.MapData(nside=nside, map=mask, pol_axis=0)
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=maskd, pol_axis=0)
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    md = covmatmod.CovMatData(nside=nside, mat=mat, pol_axis=0)
+    md.setmask(maskd)
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
+
+    #Mask is numpy array containing the pixels to be masked. The array must then
+    #contain the same number of pixels for polarization and temperature
+    mask = np.array([[3, 6, 19, 54, 100], [5, 8, 101, 302, 689], 
+                    [1, 5, 100, 250, 600]])
+    md = covmatmod.CovMatData(nside=nside, mat=mat, mask=mask, pol_axis=0)
+    mask2map=np.arange(npix)
+    mask2mapT = np.concatenate((mask2map[:3], mask2map[4:6], mask2map[7:19], 
+                                mask2map[20:54], mask2map[55:100], 
+                                mask2map[101:]))
+    mask2mapQ = np.concatenate((mask2map[:5], mask2map[6:8], mask2map[9:101], 
+                                mask2map[102:302], mask2map[303:689], 
+                                mask2map[690:]))
+    mask2mapU = np.concatenate((mask2map[:1], mask2map[2:5], mask2map[6:100], 
+                                mask2map[101:250], mask2map[251:600], 
+                                mask2map[601:]))
+    yield ok_, np.all(mask2mapT == md.mask2map[0, :md.npix_masked[0]])
+    yield ok_, np.all(mask2mapQ == md.mask2map[1, :md.npix_masked[1]])
+    yield ok_, np.all(mask2mapU == md.mask2map[2, :md.npix_masked[2]])
