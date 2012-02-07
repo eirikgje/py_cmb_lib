@@ -342,3 +342,205 @@ def test_operators():
     #for i in range(3):
     #    yield ok_, np.all(md[i].map == md.map[i])
     #yield eq_, md[0].map.shape, (npix,)
+
+def test_mask():
+    #Mask is ones and zeros
+    map = np.arange(npix)
+    mask = np.ones(npix) 
+    mask[5] = 0
+    md = mapmod.MapData(nside=nside, map=map, mask=mask)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:5],  map2mask[6:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    md = mapmod.MapData(nside=nside, map=map)
+    map2mask = np.arange(npix)
+    #yield ok_, np.all(map2mask == md.map2mask)
+    yield ok_, md.map2mask is None
+    md.setmask(mask)
+    map2mask = np.append(map2mask[:5],  map2mask[6:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Let mask be mapdata object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = mapmod.MapData(nside=nside, map=map, mask=maskd)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:5],  map2mask[6:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    md = mapmod.MapData(nside=nside, map=map)
+    md.setmask(maskd)
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Mask is boolean array
+    mask = np.zeros(npix, dtype=bool)
+    mask[:] = True
+    mask[8] = False
+    md = mapmod.MapData(nside=nside, map=map, mask=mask)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:8],  map2mask[9:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Mask is mapdata object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = mapmod.MapData(nside=nside, map=map, mask=maskd)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:8],  map2mask[9:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    md = mapmod.MapData(nside=nside, map=map)
+    md.setmask(maskd)
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Mask is numpy array containing the pixels to be masked
+    mask = np.array([3, 6, 19, 54, 100])
+    md = mapmod.MapData(nside=nside, map=map, mask=mask)
+    map2mask=np.arange(npix)
+    map2mask = np.concatenate((map2mask[:3],  map2mask[4:6], map2mask[7:19],
+                                map2mask[20:54], map2mask[55:100],
+                                map2mask[101:]))
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Test multiple maps
+    map = shaperange((4, npix, 2))
+
+    #Mask is ones and zeros
+    mask = np.ones(npix) 
+    mask[5] = 0
+    md = mapmod.MapData(nside=nside, map=map, mask=mask)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:5],  map2mask[6:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    md = mapmod.MapData(nside=nside, map=map)
+    map2mask = np.arange(npix)
+    #yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, md.map2mask is None
+    md.setmask(mask)
+    map2mask = np.append(map2mask[:5],  map2mask[6:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Let mask be mapdata object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = mapmod.MapData(nside=nside, map=map, mask=maskd)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:5],  map2mask[6:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    md = mapmod.MapData(nside=nside, map=map)
+    md.setmask(maskd)
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Mask is boolean array
+    mask = np.zeros(npix, dtype=bool)
+    mask[:] = True
+    mask[8] = False
+    md = mapmod.MapData(nside=nside, map=map, mask=mask)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:8],  map2mask[9:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Mask is mapdata object
+    maskd = mapmod.MapData(nside=nside, map=mask)
+    md = mapmod.MapData(nside=nside, map=map, mask=maskd)
+    map2mask = np.arange(npix)
+    map2mask = np.append(map2mask[:8],  map2mask[9:])
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    md = mapmod.MapData(nside=nside, map=map)
+    md.setmask(maskd)
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Mask is numpy array containing the pixels to be masked
+    mask = np.array([3, 6, 19, 54, 100])
+    md = mapmod.MapData(nside=nside, map=map, mask=mask)
+    map2mask=np.arange(npix)
+    map2mask = np.concatenate((map2mask[:3], map2mask[4:6], map2mask[7:19], 
+                        map2mask[20:54], map2mask[55:100], 
+                        map2mask[101:]))
+    yield ok_, np.all(map2mask == md.map2mask[0, :md.npix_masked[0]])
+
+    #Test different masks for polarization
+    map = shaperange((3, npix))
+
+    #Mask is ones and zeros
+    mask = np.ones((3, npix)) 
+    mask[0, 5] = 0
+    mask[1, [6, 9, 15]] = 0
+    mask[2, [7, 9, 15, 90]] = 0
+    md = mapmod.MapData(nside=nside, map=map, mask=mask, pol_axis=0)
+    map2mask = np.arange(npix)
+    map2maskT = np.append(map2mask[:5], map2mask[6:])
+    map2maskQ = np.concatenate((map2mask[:6], map2mask[7:9], map2mask[10:15], 
+                            map2mask[16:]))
+    map2maskU = np.concatenate((map2mask[:7], map2mask[8:9], map2mask[10:15], 
+                            map2mask[16:90], map2mask[91:]))
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    md = mapmod.MapData(nside=nside, map=map, pol_axis=0)
+    #yield ok_, np.all(map2mask[0] == md.map2mask[0])
+    #yield ok_, np.all(map2mask[1] == md.map2mask[1])
+    #yield ok_, np.all(map2mask[2] == md.map2mask[2])
+    yield ok_, md.map2mask is None
+    md.setmask(mask)
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    #Let mask be mapdata object
+    maskd = mapmod.MapData(nside=nside, map=mask, pol_axis=0)
+    md = mapmod.MapData(nside=nside, map=map, mask=maskd, pol_axis=0)
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    md = mapmod.MapData(nside=nside, map=map, pol_axis=0)
+    md.setmask(maskd)
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    #Mask is boolean array
+    mask = np.zeros((3, npix), dtype=bool) 
+    mask[:] = True
+    mask[0, 5] = False
+    mask[1, [6, 9, 15]] = False
+    mask[2, [7, 9, 15, 90]] = False
+    md = mapmod.MapData(nside=nside, map=map, mask=mask, pol_axis=0)
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    #Mask is mapdata object
+    maskd = mapmod.MapData(nside=nside, map=mask, pol_axis=0)
+    md = mapmod.MapData(nside=nside, map=map, mask=maskd, pol_axis=0)
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    md = mapmod.MapData(nside=nside, map=map, pol_axis=0)
+    md.setmask(maskd)
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])
+
+    #Mask is numpy array containing the pixels to be masked. The array must then
+    #contain the same number of pixels for polarization and temperature
+    mask = np.array([[3, 6, 19, 54, 100], [5, 8, 101, 302, 689], 
+                    [1, 5, 100, 250, 600]])
+    md = mapmod.MapData(nside=nside, map=map, mask=mask, pol_axis=0)
+    map2mask=np.arange(npix)
+    map2maskT = np.concatenate((map2mask[:3], map2mask[4:6], map2mask[7:19], 
+                                map2mask[20:54], map2mask[55:100], 
+                                map2mask[101:]))
+    map2maskQ = np.concatenate((map2mask[:5], map2mask[6:8], map2mask[9:101], 
+                                map2mask[102:302], map2mask[303:689], 
+                                map2mask[690:]))
+    map2maskU = np.concatenate((map2mask[:1], map2mask[2:5], map2mask[6:100], 
+                                map2mask[101:250], map2mask[251:600], 
+                                map2mask[601:]))
+    yield ok_, np.all(map2maskT == md.map2mask[0, :md.npix_masked[0]])
+    yield ok_, np.all(map2maskQ == md.map2mask[1, :md.npix_masked[1]])
+    yield ok_, np.all(map2maskU == md.map2mask[2, :md.npix_masked[2]])

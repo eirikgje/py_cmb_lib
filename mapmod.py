@@ -320,10 +320,23 @@ class MapData(object):
     map array, and all that is needed to initialize a map is an nside. This
     will make the MapData.map array be an array of zeroes. nside (and npix)
     for a map will be practically immutable after construction.
+    Masks are also possible: if given a mask at initialization or later (with
+    the setmask routine), the object will still contain all the original data, 
+    but will also contain a map2mask array. The mask provided can be either a
+    MapData object or numpy array with a boolean map array, 
+    or a MapData object or numpy array with an integer map array, where the 
+    masked pixels have the value 0, or a numpy array containing the pixel
+    numbers to be masked. In the last case, the numpy array need not (and
+    should not, unless you want to mask the whole map) contain as many elements
+    as the original map. It is possible to specify different masks for
+    polarization and temperature maps, but not for different maps, i.e. all 
+    temperature maps in the MapData object must be masked the same way. See
+    setmask for further documentation.
+
 
     """
     def __init__(self, nside, ordering='ring', map=None, pix_axis=None,
-                 pol_axis=None, pol_iter=False):
+                 pol_axis=None, pol_iter=False, mask=None):
         if map is not None and pix_axis is not None:
             if map.shape[pix_axis] != 12 * nside ** 2:
                 raise ValueError("""Explicit pix_axis does not contain the right
@@ -341,6 +354,7 @@ class MapData(object):
         self.ordering = ordering
         self.pol_axis = pol_axis
         self.pol_iter = pol_iter
+        self.setmask(mask)
 
     def __iter__(self):
         return _map_iter(self)
@@ -488,6 +502,158 @@ class MapData(object):
                 raise ValueError("Cannot append along polarization axis")
 
         self.map = np.append(self.map, map, axis=along_axis)
+
+    def setmask(self, mask):
+        """Routine to set the mask of the MapData object.
+
+        Keyword arguments:
+        mask -- None, MapData object or numpy.ndarray object.
+
+        This routine is called at initialization. If mask is None, the 'masked'
+        attribute will be set to False, and mask and map2mask will be set to
+        None. If mask is a numpy array either contained in a MapData object or
+        just by itself, it will set self.map2mask and self.mask appropriately. 
+        self.mask will be a logical array, self.map2mask an integer array. The
+        mask array can contain either zeroes and ones, booleans, or a list of 
+        pixel indices to be masked. Different masks for different polarizations
+        are supported, the relevant arrays then must have shape (3, npix) or
+        (npix, 3), or (number of masked pixels, 3) or 
+        (3, number of masked pixels) in the case where the array provided
+        contains the actual number of pixels to be masked. 
+        There is potential for confusion here, so to be sure that the mask 
+        array is interpreted correctly when it contains integer values, *only* 
+        use ones and zeros if mask is the actual mask - do not use values 
+        greater than one. Also, in the very unlikely event that there are 
+        three pixels to be masked and this is specified by using the actual
+        pixel values, the routine will have trouble identifying the
+        axis that represents polarization.
+
+        """
+        npix = 12 * self.nside ** 2
+        if self.pol_axis is not None:
+            ndim = 3
+        else:
+            ndim = 1
+        if mask is None:
+            self.map2mask = None
+            self.mask = None
+            self.masked = False
+            self.npix_masked = np.array(ndim * [npix])
+            return
+        elif isinstance(mask, MapData):
+            if mask.nside != self.nside:
+                raise ValueError("Mask nside and map nside are incompatible")
+            if mask.masked:
+                raise ValueError("Mask is itself masked. Absurd")
+            if self.pol_axis is None and mask.pol_axis is not None:
+                raise ValueError("""Mask is polarised but map is not 
+                                 (or at least it is ambiguous whether it is 
+                                 or not)""")
+            if len(mask.map.shape) > 2:
+                raise ValueError("""Mask cannot contain more than 2 
+                                    dimensions""")
+            maskpol = mask.pol_axis
+            tmask = mask.map
+        elif isinstance(mask, np.ndarray):
+            if len(mask.shape) == 2:
+                if (mask.shape == (3, 3) or mask.shape == (1, 3) or 
+                        mask.shape == (3, 1)):
+                    raise ValueError("""Please use the other mask type because
+                                        this is ambiguous""")
+                elif (mask.shape[0] == 3):
+                    maskpol = 0
+                elif (mask.shape[1] == 3):
+                    maskpol = 1
+                else:
+                    if not (mask.shape[0] == 1 or mask.shape[1] == 1):
+                        raise ValueError("""Mask contains two dimensions but 
+                                            they're both neither one nor 
+                                            three""")
+                    else:
+                        maskpol = None
+            elif len(mask.shape) == 1:
+                maskpol = None
+            else: 
+                raise ValueError("""Mask cannot contain more than 2
+                                    dimensions or less than 1 dimension""")
+            if ((np.size(mask) != npix and np.size(mask) != 3 * npix) or 
+                    np.any(mask > 1)):
+                #Assume it contains pixel indices - this only happens for the
+                #ndarray case.
+                if mask.dtype != 'int':
+                    raise TypeError("""Mask supposed to specify pixel values
+                                        but does not have integer data type""")
+                if len(mask.shape) == 1:
+                    if any((np.sort(mask)[1:] - np.sort(mask)[:-1]) == 0):
+                        raise ValueError("""Duplicate values for mask that 
+                                            specifies which pixels to mask""")
+                else:
+                    if maskpol is None:
+                        if any(np.sort(np.reshape(mask, np.size(mask)))[1:] - 
+                                np.sort(np.reshape(mask, np.size(mask)))[:-1] 
+                                == 0):
+                            raise ValueError("""Duplicate values for mask that 
+                                                specifies which pixels to 
+                                                mask""")
+                    elif maskpol == 0:
+                        for i in range(3):
+                            if any(np.sort(mask[i])[1:] - np.sort(mask[i])[:-1]
+                                    == 0):
+                                raise ValueError("""Duplicate values for mask 
+                                                    that specifies which pixels
+                                                    to mask""")
+                    elif maskpol == 1:
+                        for i in range(3):
+                            if any(np.sort(mask[:, i])[1:] - 
+                                    np.sort(mask[:, i])[:-1] == 0):
+                                raise ValueError("""Duplicate values for mask 
+                                                    that specifies which pixels
+                                                    to mask""")
+                if len(mask.shape) == 1:
+                    tmask = np.ones(npix)
+                    tmask[mask] = 0
+                elif len(mask.shape) == 2:
+                    if maskpol is None:
+                        tmask = np.ones(npix)
+                        tmask[np.reshape(mask, np.size(mask))] = 0
+                    elif maskpol == 0:
+                        tmask = np.ones((3, npix))
+                        for i in range(3):
+                            tmask[i, mask[i]] = 0
+                    elif maskpol == 1:
+                        tmask = np.ones((npix, 3))
+                        for i in range(3):
+                            tmask[mask[i], i] = 0
+            else:
+                tmask = mask
+        else:
+            raise TypeError("""Wrong object for mask""")
+
+        self.mask = np.zeros((ndim, 12 * self.nside ** 2), dtype='bool')
+        if (tmask.dtype == 'int' or tmask.dtype == 'float' or 
+                tmask.dtype == 'bool'):
+            if maskpol is None:
+                if len(tmask.shape) == 1:
+                    self.mask[:, :] = ndim * [tmask != 0]
+                else:
+                    self.mask[:, :] = (ndim * 
+                            [np.reshape(tmask, np.size(tmask)) != 0])
+            elif maskpol == 0:
+                self.mask = (tmask != 0)
+            elif maskpol == 1:
+                self.mask = (np.transpose(tmask) != 0)
+        else:
+            raise TypeError("""Mask datatype is not supported""")
+
+        #Make the map2mask array
+        self.npix_masked = np.zeros(ndim)
+        allpixs = np.arange(npix, dtype='int')
+        self.map2mask = np.zeros((ndim, npix), dtype='int')
+
+        for i in range(ndim):
+            self.npix_masked[i] = sum(self.mask[i])
+            self.map2mask[i, :self.npix_masked[i]] = allpixs[self.mask[i]]
+        self.masked = True
 
 class _map_iter(object):
     def __init__(self, md):
