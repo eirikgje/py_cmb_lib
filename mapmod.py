@@ -322,7 +322,7 @@ class MapData(object):
     for a map will be practically immutable after construction.
     Masks are also possible: if given a mask at initialization or later (with
     the setmask routine), the object will still contain all the original data, 
-    but will also contain a map2mask array. The mask provided can be either a
+    but will also contain a mask2map array. The mask provided can be either a
     MapData object or numpy array with a boolean map array, 
     or a MapData object or numpy array with an integer map array, where the 
     masked pixels have the value 0, or a numpy array containing the pixel
@@ -510,10 +510,10 @@ class MapData(object):
         mask -- None, MapData object or numpy.ndarray object.
 
         This routine is called at initialization. If mask is None, the 'masked'
-        attribute will be set to False, and mask and map2mask will be set to
+        attribute will be set to False, and mask and mask2map will be set to
         None. If mask is a numpy array either contained in a MapData object or
-        just by itself, it will set self.map2mask and self.mask appropriately. 
-        self.mask will be a logical array, self.map2mask an integer array. The
+        just by itself, it will set self.mask2map and self.mask appropriately. 
+        self.mask will be a logical array, self.mask2map an integer array. The
         mask array can contain either zeroes and ones, booleans, or a list of 
         pixel indices to be masked. Different masks for different polarizations
         are supported, the relevant arrays then must have shape (3, npix) or
@@ -535,7 +535,7 @@ class MapData(object):
         else:
             ndim = 1
         if mask is None:
-            self.map2mask = None
+            self.mask2map = None
             self.mask = None
             self.masked = False
             self.npix_masked = np.array(ndim * [npix])
@@ -645,14 +645,14 @@ class MapData(object):
         else:
             raise TypeError("""Mask datatype is not supported""")
 
-        #Make the map2mask array
+        #Make the mask2map array
         self.npix_masked = np.zeros(ndim)
         allpixs = np.arange(npix, dtype='int')
-        self.map2mask = np.zeros((ndim, npix), dtype='int')
+        self.mask2map = np.zeros((ndim, npix), dtype='int')
 
         for i in range(ndim):
             self.npix_masked[i] = sum(self.mask[i])
-            self.map2mask[i, :self.npix_masked[i]] = allpixs[self.mask[i]]
+            self.mask2map[i, :self.npix_masked[i]] = allpixs[self.mask[i]]
         self.masked = True
 
 class _map_iter(object):
