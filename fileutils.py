@@ -45,10 +45,12 @@ def read_file(fname, type=None):
                                 fac = 1e6
                             elif cols[0].unit in ('(K_CMB)^2',):
                                 fac = 1e12
-                            elif cols[0].unit in ('N_hit', 'unknown'):
+                            elif cols[0].unit in ('N_hit', 'unknown', 'counts'):
                                 fac = 1
                             elif cols[0].unit == 'muK':
                                 fac = 1
+                            elif cols[0].unit == 'mK':
+                                fac = 1e3
                             elif cols[0].unit is None:
                                 fac = 1
                             else:
@@ -65,10 +67,12 @@ def read_file(fname, type=None):
                                     fac = 1e6
                                 elif cols[i].unit in ('(K_CMB)^2',):
                                     fac = 1e12
-                                elif cols[i].unit in ('N_hit', 'unknown'):
+                                elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
                                     fac = 1
                                 elif cols[i].unit == 'muK':
                                     fac = 1
+                                elif cols[0].unit == 'mK':
+                                    fac = 1e3
                                 elif cols[i].unit is None:
                                     fac = 1
                                 else:
@@ -89,8 +93,12 @@ def read_file(fname, type=None):
                             fac = 1e6
                         elif cols[i].unit in ('(K_CMB)^2',):
                             fac = 1e12
-                        elif cols[i].unit in ('N_hit', 'unknown'):
+                        elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
                             fac = 1
+                        elif cols[i].unit == 'muK':
+                            fac = 1
+                        elif cols[i].unit == 'mK':
+                            fac = 1e3
                         elif cols[i].unit is None:
                             fac = 1
                         else:
@@ -221,7 +229,8 @@ def determine_type_fits(hdulist, fname):
         raise NotImplementedError()
     raise TypeError("Cannot determine fits data type")
 
-def write_file(fname, data, bintab=True, table_header=None, divide_data=False, names=None, bad_data=None, sig=None):
+def write_file(fname, data, bintab=True, table_header=None, divide_data=False, 
+                names=None, bad_data=None, sig=None):
     if fname.endswith('.fits'):
         if isinstance(data, mapmod.MapData):
             if bintab:
