@@ -54,6 +54,29 @@ def map2alm(md, lmax, mmax=None, weights=None):
                         pol_iter=md.pol_iter, ordering='m-major')
     return ad
 
+def noisemap(noise_data, nside=None):
+    """Simulates a noise map.
+
+    Now takes only diagonal noise values, but will eventually be able to
+    simulate based on covariance matrices as well.
+
+    """
+    if isinstance(noise_data, mapmod.MapData):
+        #Assume that the noise is diagonal, and to be multiplied by a gaussian
+        gauss = np.random.standard_normal(noise_data.map.shape)
+        noisemap = gauss * noise_data.map
+        noise = mapmod.MapData(nside=noise_data.nside, map=noisemap, 
+                                pol_axis=noise_data.pol_axis, 
+                                pol_iter=noise_data.pol_iter)
+    elif isinstance(noise_data, np.ndarray):
+        if nside is None:
+            raise ValueError("Must provide nside when noise_data is an array")
+        gauss = np.random.standard_normal(noise_data.shape)
+        noisemap = gauss * noise_data.map
+        noise = mapmod.Mapdata(nside=nside, map=noisemap)
+
+    return noise
+
 def plot(md, sig=(1,), min=None, max=None, prefix=None, ncols=None, 
          common_bar=True):
     """Uses map2png to plot a MapData map"""
