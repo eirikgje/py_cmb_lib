@@ -6,51 +6,132 @@ from versionmod import bin, any, all
 
 _r2n = {}
 _n2r = {}
-_pix2ang_r = {}
-_pix2ang_n = {}
+_theta_r = {}
+_phi_r = {}
+_theta_n = {}
+_phi_n = {}
 _pix2x = None
 _pix2y = None
 _x2pix = None
 _y2pix = None
 
-def _init_pix2ang(nside, order):
+def _init_pix2ang(nside, ordering):
 #    pass
-    global _pix2ang_r
-    global _pix2ang_n
+    global _theta_r
+    global _phi_r
+    global _theta_n
+    global _phi_n
+    global _x2pix
+    global _y2pix
     
     npix = 12 * nside ** 2
-    if order == 'ring':
-        if _pix2ang_n.has_key(nside):
-            pass
-            #TODO ring2nest og saa tilbake
-    elif order == 'nested':
-        if _pix2ang_r.has_key(nside):
-            pass
-            #TODO omvendt
-    pixs = np.arange(npix)
-    nl2 = 2 * nside
-    nl4 = 4 * nside
-    ncap = nl2 * (nside - 1)
-#    ip = np.zeros(npix, int)
-#    irs = np.zeros(npix, int)
-#    iphi = np.zeros(npix, int)
-#    iring = np.zeros(npix, int)
+#    if ordering == 'ring':
+#        if _pix2ang_n.has_key(nside):
+#            pass
+#            #TODO ring2nest og saa tilbake
+#    elif ordering == 'nested':
+#        if _pix2ang_r.has_key(nside):
+#            pass
+#            #TODO omvendt
+    pixs = np.arange(npix, dtype=int)
     theta = np.zeros(npix)
     phi = np.zeros(npix)
+    if ordering == 'ring':
+        nl2 = 2 * nside
+        nl4 = 4 * nside
+        ncap = nl2 * (nside - 1)
+    
+        #South polar cap
+        filter = pixs >= npix - ncap
+        ip = npix - pixs[filter]
+        iring = (np.sqrt(ip * 0.5).round()).astype(int)
+        iphi = 2 * iring * (iring + 1) - ip
+        iring, iphi = _correct_ring_phi(-1, iring, iphi)
+        theta[filter] = np.arccos((iring / nside) ** 2 / 3.0 - 1.0)
+        phi[filter] = (iphi + 0.5) * np.pi * 0.5 / iring
 
-    #South polar cap
-    filter = pixs >= npix - ncap
-    ip = npix - pixs[filter]
-    iring = (np.sqrt(ip * 0.5).round()).astype(int)
-    iphi = 2 * iring * (iring + 1) - ip
-    iring, iphi = _correct_ring_phi(-1, iring, iphi)
-    theta[filter] = np.arccos((iring / nside) ** 2 / 3.0 - 1.0)
-    phi[filter] = (iphi + 0.5) * np.pi * 0.5 / iring
+        #Equatorial region
+        filter = (pixs < npix - ncap) & (pixs >= ncap)
+        ip = pixs[filter] - ncap
+        iring = ip // nl4 + nside
+        iphi = ip % nl4
+        fodd = 0.5 * ((iring + nside + 1) % 2)
+        theta[filter] = np.arccos((nl2 - iring) / (1.5 * nside))
+        phi[filter] = (iphi + fodd) * np.pi * 0.5 / nside
 
-    filter = pixs < npix - ncap
-    ip = pixs[filter] - ncap
-    iring = (ip / nl4).astype(int) + nside
-    iphi = ip % (nl4 - 1)
+        #North polar cap
+        filter = pixs < ncap
+        iring = np.sqrt(((pixs[filter] + 1) * 0.5).round()).astype(int)
+        iphi = pixs[filter] - 2 * iring * (iring - 1)
+        iring, iphi = _correct_ring_phi(1, iring, iphi)
+        theta[filter] = np.arccos(1 - (iring / nside) ** 2 / 3)
+        phi[filter] = (iphi + 0.5) * np.pi * 0.5 / iring
+
+        _theta_r[nside] = theta
+        _phi_r[nside] = phi
+    elif ordering == 'nested':
+        jrll = np.array((2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4))
+        jpll = np.array((1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7))
+        if _pix2x is None:
+            _mk_pix2xy()
+        npface = nside ** 2
+        nl4 = 4 * nside
+
+        face_num = (pixs / npface).astype(int)
+        ipf = pixs % npface
+
+        fn = nside
+        fact1 = 1 / (3 * fn ** 2)
+        fact2 = 2 / (3 * fn)
+        ix = 0
+        iy = 0
+        scale = 1
+        ismax = 4
+        for i in range(0, ismax + 1):
+            ip_low = ipf % 1024
+            ix += scale * _pix2x[ip_low]
+            iy += scale * _pix2y[ip_low]
+            scale = scale * 32
+            ipf = (ipf / 1024).astype(int)
+        ix += scale * _pix2x[ipf]
+        iy += scale * _pix2y[ipf]
+
+        jrt = ix + iy
+        jpt = ix - iy
+
+        print face_num
+        jr = jrll[face_num] * nside - jrt - 1
+
+        kshift = np.zeros(len(pixs))
+        nr = np.zeros(len(pixs))
+        z = np.zeros(len(pixs))
+
+        #South pole region
+        filter = jr > 3 * nside
+        nr[filter] = nl4 - jr[filter]
+        z[filter] = - 1 + nr * fact1 * nr
+        kshift[filter] = 0
+
+        #Equatorial region
+        filter = (jr <= 3 * nside) & (jr >= nside)
+        nr[filter] = nside 
+        z[filter] = (2 * nside - jr[filter]) * fact2
+        kshift[filter] = (jr - nside) % 2
+
+        #North pole region
+        filter = jr < nside
+        nr[filter] = jr[filter]
+        z[filter] = 1 - nr[filter] * fact1 * nr[filter]
+        kshift[filter] = 0
+
+        theta = np.arccos(z)
+        jp = (jpll[face_num] * nr + jpt + 1 + kshift) * 0.5
+        jp[jp > nl4] -= nl4
+        jp[jp < 1] -= nl4
+
+        phi = (jp - (kshift + 1) * 0.5) * np.pi / nr
+        _theta_n[nside] = theta
+        _phi_n[nside] = phi
 
 def _init_r2n(nside):
     global _r2n
@@ -238,6 +319,17 @@ def _compatible(md1, md2):
         return False
     else:
         return True
+
+def pix2ang(pix, ordering, nside):
+    if ordering == 'ring':
+        if not _theta_r.has_key(nside):
+            _init_pix2ang(nside, ordering)
+        return (_theta_r[nside][pix], _phi_r[nside][pix])
+    elif ordering == 'nested':
+        if not _theta_n.has_key(nside):
+            _init_pix2ang(nside, ordering)
+        return (_theta_n[nside][pix], _phi_n[nside][pix])
+
 
 def degrade_average(md, nside_n):
     """Degrade input map to nside resolution by averaging over pixels.
