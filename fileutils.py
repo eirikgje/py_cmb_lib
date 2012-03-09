@@ -26,7 +26,10 @@ def read_file(fname, type=None):
                         shape = (3, npix)
                     else:
                         if hdr['naxis2'] != 1:
-                            shape = (hdr['naxis2'], npix)
+                            if hdr['tform1'] == '1024E':
+                                shape = (npix,)
+                            else:
+                                shape = (hdr['naxis2'], npix)
                         else:
                             shape = (npix,)
                 else:
@@ -56,10 +59,13 @@ def read_file(fname, type=None):
                             else:
                                 print cols[0].unit
                                 raise ValueError("Unknown unit")
-                            for i in range(hdr['naxis2']):
-                                print objdata.map[i].shape
-                                print data.field(0)[i].shape
-                                objdata.map[i] = data.field(0)[i].astype(np.float64)*fac
+                            if hdr['tform1'] == '1024E':
+                                objdata.map[:] = data.field(0).flatten().astype(np.float64) * fac
+                            else:
+                                for i in range(hdr['naxis2']):
+                                    print objdata.map[i].shape
+                                    print data.field(0)[i].shape
+                                    objdata.map[i] = data.field(0)[i].astype(np.float64)*fac
                         else:
                             for i in range(hdr['TFIELDS']):
                             #Saves the data in muK as default
