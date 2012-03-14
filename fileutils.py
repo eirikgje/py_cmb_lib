@@ -175,6 +175,17 @@ def read_file(fname, type=None):
                     objdata.beam[i, :] = data.field(i)
             else:
                 raise NotImplementedError()
+
+        elif type.lower() == 'cls':
+            if len(hdulist) == 2:
+                hdr = hdulist[1].header
+                data = hdulist[1].data
+                if hdr['polar']:
+                    raise NotImplementedError()
+                else:
+                    objdata = almmod.ClData(lmax=hdr['max-lpol'], 
+                            cls=data.field(0), 
+                            spectra='temp')
         else:
             raise NotImplementedError()
         hdulist.close()
