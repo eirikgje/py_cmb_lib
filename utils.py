@@ -90,19 +90,32 @@ def alm2ps(ad):
     if cd.spectra != ['TT']:
         raise NotImplementedError
     if cd.spectra == ['TT']:
-        for l in range(ad.lmax + 1):
-            sl = getslice(cd.cls, cd.cl_axis, l)
-            for m in range(min(l, ad.mmax) + 1):
-                asl = getslice(ad.alms, ad.ind_axis, almmod.lm2ind((l, m), \
-                        lmmax=(ad.lmax, ad.mmax), ordering=ad.ordering))
-                if m == 0:
-                    cd.cls[sl] += ad.alms[asl] ** 2
-                else:
-                    cd.cls[sl] += 2 * (ad.alms[asl] * \
-                        ad.alms[asl].conjugate()).real
-            cd.cls[sl] = cd.cls[sl] / (2 * l + 1)
+        if ad.ordering == 'l-major':
+            for l in range(ad.lmax + 1):
+                sl = getslice(cd.cls, cd.cl_axis, l)
+                ind1 = almmod.lm2ind((l, 0), lmmax=(ad.lmax, ad.mmax), \
+                        ordering=ad.ordering)
+                ind2 = almmod.lm2ind((l, min(l, ad.mmax)), \
+                        lmmax=(ad.lmax, ad.mmax), ordering=ad.ordering)
+                asl = list(getslice(ad.alms, ad.ind_axis, ind1))
+                cd.cls[sl] += ad.alms[asl] ** 2
+                asl[ad.ind_axis] = slice(ind1 + 1, ind2 + 1)
+                cd.cls[sl] += 2 * np.sum((ad.alms[asl] * \
+                        ad.alms[asl].conjugate()).real)
+                cd.cls[sl] = cd.cls[sl] / (2 * l + 1)
+        else:
+            for l in range(ad.lmax + 1):
+                sl = getslice(cd.cls, cd.cl_axis, l)
+                for m in range(min(l, ad.mmax) + 1):
+                    asl = getslice(ad.alms, ad.ind_axis, almmod.lm2ind((l, m), \
+                            lmmax=(ad.lmax, ad.mmax), ordering=ad.ordering))
+                    if m == 0:
+                        cd.cls[sl] += ad.alms[asl] ** 2
+                    else:
+                        cd.cls[sl] += 2 * (ad.alms[asl] * \
+                            ad.alms[asl].conjugate()).real
+                cd.cls[sl] = cd.cls[sl] / (2 * l + 1)
     return cd
-
 
 def noisemap(noise_data, nside=None):
     """Simulates a noise map.
