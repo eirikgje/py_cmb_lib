@@ -9,6 +9,29 @@ import subprocess
 import shlex
 import tempfile
 
+def getslice(ar, axis, ind):
+    """VERY handy utility routine to return a slice.
+
+    Returns the ind'th slice along axis of array ar. Axis and ind can be lists
+    or similar, in which case the nth element of axis corresponds to the nth 
+    element of ind"""
+
+    shape = ar.shape
+    if isinstance(axis, int):
+        sl = (slice(None),) * axis + (ind,) + (Ellipsis,)
+    elif len(axis) == 2:
+        if axis[0] < axis[1]:
+            sl = (slice(None),) * axis[0] + (ind[0],) + (slice(None),) * \
+                    (axis[1] - axis[0] - 1) + (ind[1],) + (Ellipsis,)
+        else:
+            sl = (slice(None),) * axis[1] + (ind[1],) + (slice(None),) * \
+                    (axis[0] - axis[1] - 1) + (ind[0],) + (Ellipsis,)
+    else:
+        raise NotImplementedError
+    return sl
+
+
+
 def alm2map(ad, nside):
     """Determines (from whether pol_axis is set or not) whether or not to use
     polarization if polarization=True. If polarization=False, treats each alm
@@ -53,6 +76,33 @@ def map2alm(md, lmax, mmax=None, weights=None):
     ad = almmod.AlmData(lmax, mmax=mmax, alms=alm, pol_axis=md.pol_axis, 
                         pol_iter=md.pol_iter, ordering='m-major')
     return ad
+
+def alm2ps(ad):
+    if ad.pol_axis is not None:
+        if ad.pol_axis < ad.ind_axis:
+            shape = list(ad.alms.shape[:ad.pol_axis] + (6,) + ad.alms.shape[ad.pol_axis+1:ad.ind_axis] + (ad.lmax + 1) + ad.alms.shape[ad.ind_axis + 1:])
+        else:
+            shape = list(ad.alms.shape[:ad.ind_axis] + (ad.lmax + 1,) + ad.alms.shape[ad.ind_axis+1:ad.pol_axis] + (6,) + ad.alms.shape[ad.pol_axis + 1:])
+        cd = almmod.ClData(ad.lmax, cls = np.zeros(shape), spec_axis=ad.pol_axis, spectra='all')
+    else:
+        shape = list(ad.alms.shape[:ad.ind_axis] + (ad.lmax + 1,) + ad.alms.shape[ad.ind_axis + 1:])
+        cd = almmod.ClData(ad.lmax, cls=np.zeros(shape))
+    if cd.spectra != ['TT']:
+        raise NotImplementedError
+    if cd.spectra == ['TT']:
+        for l in range(ad.lmax + 1):
+            sl = getslice(cd.cls, cd.cl_axis, l)
+            for m in range(min(l, ad.mmax) + 1):
+                asl = getslice(ad.alms, ad.ind_axis, almmod.lm2ind((l, m), \
+                        lmmax=(ad.lmax, ad.mmax), ordering=ad.ordering))
+                if m == 0:
+                    cd.cls[sl] += ad.alms[asl] ** 2
+                else:
+                    cd.cls[sl] += 2 * (ad.alms[asl] * \
+                        ad.alms[asl].conjugate()).real
+            cd.cls[sl] = cd.cls[sl] / (2 * l + 1)
+    return cd
+
 
 def noisemap(noise_data, nside=None):
     """Simulates a noise map.

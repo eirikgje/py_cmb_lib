@@ -150,9 +150,9 @@ def read_file(fname, type=None):
             if len(hdulist) == 2:
                 data = hdulist[1].data
                 hdr = hdulist[1].header
-                objdata = np.zeros((3, hdr['NAXIS2']))
+                objdata = np.zeros((3, 2 * hdr['NSIDE']))
                 for i in range(3):
-                    objdata[i] = data.field(i)
+                    objdata[i] = data.field(i).flatten()
                 objdata = objdata + 1
             else:
                 raise NotImplementedError()
