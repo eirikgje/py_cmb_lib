@@ -26,7 +26,7 @@ def read_file(fname, type=None):
                         shape = (3, npix)
                     else:
                         if hdr['naxis2'] != 1:
-                            if hdr['tform1'] == '1024E':
+                            if hdr['tform1'] in ('1024E', '1024D'):
                                 shape = (npix,)
                             else:
                                 shape = (hdr['naxis2'], npix)
@@ -59,7 +59,7 @@ def read_file(fname, type=None):
                             else:
                                 print cols[0].unit
                                 raise ValueError("Unknown unit")
-                            if hdr['tform1'] == '1024E':
+                            if hdr['tform1'] in ('1024E', '1024D'):
                                 objdata.map[:] = data.field(0).flatten().astype(np.float64) * fac
                             else:
                                 for i in range(hdr['naxis2']):
