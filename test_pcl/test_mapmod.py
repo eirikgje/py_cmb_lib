@@ -24,14 +24,14 @@ def test_ordering_conversion():
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
     md.switchordering()
     for key, value in r2npixs.items():
-        yield eq_, md.map[key], value
+        yield eq_, md.map[value], key
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
     md.switchordering()
     for key, value in n2rpixs.items():
-        yield eq_, md.map[key], value
+        yield eq_, md.map[value], key
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
@@ -41,14 +41,14 @@ def test_ordering_conversion():
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
     md.switchordering()
     for key, value in n2rpixs.items():
-        yield eq_, md.map[key], value
+        yield eq_, md.map[value], key
     md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
     md.switchordering()
     for key, value in r2npixs.items():
-        yield eq_, md.map[key], value
+        yield eq_, md.map[value], key
     md.switchordering()
     yield ok_, np.all(map == md.map)
 

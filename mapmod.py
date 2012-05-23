@@ -133,14 +133,14 @@ def _init_pix2ang(nside, ordering):
         _theta_n[nside] = theta
         _phi_n[nside] = phi
 
-def _init_r2n(nside):
+def _init_n2r(nside):
     global _r2n
     global _x2pix
     global _y2pix
     npix = 12 * nside ** 2
     #If the other is already initialized, use that information instead
-    if _n2r.has_key(nside):
-        _r2n[nside] = _n2r[nside].argsort()
+    if _r2n.has_key(nside):
+        _n2r[nside] = _r2n[nside].argsort()
         return
     if _x2pix is None:
         _mk_xy2pix()
@@ -219,7 +219,7 @@ def _init_r2n(nside):
     ipf = ((_x2pix[ix_hi] + _y2pix[iy_hi]) * (128 * 128) + 
             _x2pix[ix_low] + _y2pix[iy_low])
 
-    _r2n[nside] = ipf + face_num * nside ** 2
+    _n2r[nside] = ipf + face_num * nside ** 2
 
 def _correct_ring_phi(location, iring, iphi):
     delta = np.zeros(len(iphi), int)
@@ -240,12 +240,12 @@ def _mk_xy2pix():
         _x2pix[i] = int(b, 4)
         _y2pix[i] = 2 * int(b, 4)
 
-def _init_n2r(nside):
-    global _n2r
+def _init_r2n(nside):
+    global _r2n
     global _pix2x
     global _pix2y
-    if _r2n.has_key(nside):
-        _n2r[nside] = _r2n[nside].argsort()
+    if _n2r.has_key(nside):
+        _r2n[nside] = _n2r[nside].argsort()
         return
 
     npix = 12 * nside * nside
@@ -295,7 +295,7 @@ def _init_n2r(nside):
     jp[jp > nl4] = jp[jp > nl4] - nl4
     jp[jp < 1] = jp[jp < 1] + nl4
 
-    _n2r[nside] = n_before + jp - 1
+    _r2n[nside] = n_before + jp - 1
 
 def _mk_pix2xy():
     global _pix2x
@@ -379,27 +379,27 @@ def nest2ring(md):
     return md
 
 def ring2nest_ind(ind, nside):
-    global _r2n
+    global _n2r
 
     b = bin(nside)[2:]
     if (b[0] != '1' or int(b[1:], 2) != 0):
         raise ValueError('ring2nest_ind: nside has invalid value')
-    if not _r2n.has_key(nside):
-        _init_r2n(nside)
+    if not _n2r.has_key(nside):
+        _init_n2r(nside)
 
-    return _r2n[nside][ind]
+    return _n2r[nside][ind]
 
 def nest2ring_ind(ind, nside):
-    global _n2r
+    global _r2n
 
     b = bin(nside)[2:]
     if (b[0] != '1' or int(b[1:], 2) != 0):
         raise ValueError('nest2ring_ind: nside has invalid value')
 
-    if not _n2r.has_key(nside):
-        _init_n2r(nside)
+    if not _r2n.has_key(nside):
+        _init_r2n(nside)
 
-    return _n2r[nside][ind]
+    return _r2n[nside][ind]
 
 
 class MapData(object):
