@@ -50,7 +50,7 @@ def read_file(fname, type=None):
                                 fac = 1e6
                             elif cols[0].unit in ('(K_CMB)^2',):
                                 fac = 1e12
-                            elif cols[0].unit in ('N_hit', 'unknown', 'counts'):
+                            elif cols[0].unit in ('N_hit', 'unknown', 'counts', 'deg'):
                                 fac = 1
                             elif cols[0].unit == 'muK':
                                 fac = 1
@@ -100,7 +100,7 @@ def read_file(fname, type=None):
                             fac = 1e6
                         elif cols[i].unit in ('(K_CMB)^2',):
                             fac = 1e12
-                        elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
+                        elif cols[i].unit in ('N_hit', 'unknown', 'counts', 'deg'):
                             fac = 1
                         elif cols[i].unit == 'muK':
                             fac = 1
@@ -161,11 +161,16 @@ def read_file(fname, type=None):
             if len(hdulist) == 2:
                 data = hdulist[1].data
                 hdr = hdulist[1].header
-                if hdr['polar']:
-                    shape = (3, hdr['NAXIS2'])
+                if hdr.has_key('polar'):
+                    polar = hdr['polar']
+                    if polar:
+                        shape = (3, hdr['NAXIS2'])
+                    else:
+                        shape = (1, hdr['NAXIS2'])
                 else:
-                    shape = (1, hdr['NAXIS2'])
-                if hdr['polar']:
+                    polar = False
+                    shape  = (1, hdr['NAXIS2'])
+                if polar:
                     objdata = beammod.BeamData(lmax=hdr['NAXIS2'] - 1,
                                             beam=np.zeros(shape),
                                             pol_axis=0)
