@@ -44,7 +44,7 @@ def _init_pix2ang(nside, ordering):
         #South polar cap
         filter = pixs >= npix - ncap
         ip = npix - pixs[filter]
-        iring = (np.sqrt(ip * 0.5).round()).astype(int)
+        iring = np.sqrt(ip * 0.5).round().astype(int)
         iphi = 2 * iring * (iring + 1) - ip
         iring, iphi = _correct_ring_phi(-1, iring, iphi)
         theta[filter] = np.arccos((iring / nside) ** 2 / 3.0 - 1.0)
@@ -61,7 +61,7 @@ def _init_pix2ang(nside, ordering):
 
         #North polar cap
         filter = pixs < ncap
-        iring = np.sqrt(((pixs[filter] + 1) * 0.5).round()).astype(int)
+        iring = np.sqrt(((pixs[filter] + 1) * 0.5)).round().astype(int)
         iphi = pixs[filter] - 2 * iring * (iring - 1)
         iring, iphi = _correct_ring_phi(1, iring, iphi)
         theta[filter] = np.arccos(1 - (iring / nside) ** 2 / 3)
