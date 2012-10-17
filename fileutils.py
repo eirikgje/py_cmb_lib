@@ -26,7 +26,9 @@ def read_file(fname, type=None):
                         shape = (3, npix)
                     else:
                         if hdr['naxis2'] != 1:
-                            if hdr['tform1'] == '1024E':
+                            if hdr['naxis2'] == 12 * hdr['nside'] ** 2:
+                                shape = (npix,)
+                            elif hdr['tform1'] in ('1024E', '1024D'):
                                 shape = (npix,)
                             else:
                                 shape = (hdr['naxis2'], npix)
@@ -48,7 +50,7 @@ def read_file(fname, type=None):
                                 fac = 1e6
                             elif cols[0].unit in ('(K_CMB)^2',):
                                 fac = 1e12
-                            elif cols[0].unit in ('N_hit', 'unknown', 'counts'):
+                            elif cols[0].unit in ('N_hit', 'unknown', 'counts', 'deg'):
                                 fac = 1
                             elif cols[0].unit == 'muK':
                                 fac = 1
@@ -57,14 +59,13 @@ def read_file(fname, type=None):
                             elif cols[0].unit is None:
                                 fac = 1
                             else:
-                                print cols[0].unit
                                 raise ValueError("Unknown unit")
-                            if hdr['tform1'] == '1024E' or hdr['tform1'] == '1024D':
+                            if hdr['naxis2'] == 12 * hdr['nside'] ** 2:
+                                objdata.map[:] = data.field(0).flatten().astype(np.float64) * fac
+                            elif hdr['tform1'] in ('1024E', '1024D'):
                                 objdata.map[:] = data.field(0).flatten().astype(np.float64) * fac
                             else:
                                 for i in range(hdr['naxis2']):
-                                    print objdata.map[i].shape
-                                    print data.field(0)[i].shape
                                     objdata.map[i] = data.field(0)[i].astype(np.float64)*fac
                         else:
                             for i in range(hdr['TFIELDS']):
@@ -99,11 +100,11 @@ def read_file(fname, type=None):
                             fac = 1e6
                         elif cols[i].unit in ('(K_CMB)^2',):
                             fac = 1e12
-                        elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
+                        elif cols[i].unit in ('N_hit', 'unknown', 'counts', 'deg'):
                             fac = 1
                         elif cols[i].unit == 'muK':
                             fac = 1
-                        elif cols[i].unit == 'mK':
+                        elif cols[i].unit in ('mK', 'mK, thermodynamic'):
                             fac = 1e3
                         elif cols[i].unit is None:
                             fac = 1
@@ -150,9 +151,9 @@ def read_file(fname, type=None):
             if len(hdulist) == 2:
                 data = hdulist[1].data
                 hdr = hdulist[1].header
-                objdata = np.zeros((3, hdr['NAXIS2']))
+                objdata = np.zeros((3, 2 * hdr['NSIDE']))
                 for i in range(3):
-                    objdata[i] = data.field(i)
+                    objdata[i] = data.field(i).flatten()
                 objdata = objdata + 1
             else:
                 raise NotImplementedError()
@@ -160,11 +161,16 @@ def read_file(fname, type=None):
             if len(hdulist) == 2:
                 data = hdulist[1].data
                 hdr = hdulist[1].header
-                if hdr['polar']:
-                    shape = (3, hdr['NAXIS2'])
+                if hdr.has_key('polar'):
+                    polar = hdr['polar']
+                    if polar:
+                        shape = (3, hdr['NAXIS2'])
+                    else:
+                        shape = (1, hdr['NAXIS2'])
                 else:
-                    shape = (1, hdr['NAXIS2'])
-                if hdr['polar']:
+                    polar = False
+                    shape  = (1, hdr['NAXIS2'])
+                if polar:
                     objdata = beammod.BeamData(lmax=hdr['NAXIS2'] - 1,
                                             beam=np.zeros(shape),
                                             pol_axis=0)
