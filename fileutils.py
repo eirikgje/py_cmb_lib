@@ -107,7 +107,7 @@ def read_file(fname, type=None):
                             fac = 1
                         elif cols[i].unit == 'muK':
                             fac = 1
-                        elif cols[i].unit in ('mK', 'mK, thermodynamic'):
+                        elif cols[i].unit in ('mK', 'mK,thermodynamic'):
                             fac = 1e3
                         elif cols[i].unit is None:
                             fac = 1
