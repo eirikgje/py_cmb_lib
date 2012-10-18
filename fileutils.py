@@ -27,7 +27,10 @@ def read_file(fname, type=None):
                     else:
                         if hdr['naxis2'] != 1:
                             if hdr['naxis2'] == 12 * hdr['nside'] ** 2:
-                                shape = (npix,)
+                                if hdr['tfields'] != 3:
+                                    shape = (npix,)
+                                else:
+                                    shape = (3, npix)
                             elif hdr['tform1'] in ('1024E', '1024D'):
                                 shape = (npix,)
                             else:
