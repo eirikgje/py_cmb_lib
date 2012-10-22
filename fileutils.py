@@ -50,15 +50,18 @@ def read_file(fname, type=None):
                     else:
                         if hdr['naxis2'] != 1:
                             if cols[0].unit in ('K_CMB', 'K'):
-                                fac = 1e6
+#                                fac = 1e6
+                                fac = 1
                             elif cols[0].unit in ('(K_CMB)^2',):
-                                fac = 1e12
+#                                fac = 1e12
+                                fac = 1
                             elif cols[0].unit in ('N_hit', 'unknown', 'counts', 'deg'):
                                 fac = 1
                             elif cols[0].unit == 'muK':
                                 fac = 1
                             elif cols[0].unit == 'mK':
-                                fac = 1e3
+#                                fac = 1e3
+                                fac = 1
                             elif cols[0].unit is None:
                                 fac = 1
                             else:
@@ -74,15 +77,18 @@ def read_file(fname, type=None):
                             for i in range(hdr['TFIELDS']):
                             #Saves the data in muK as default
                                 if cols[i].unit in ('K_CMB', 'K'):
-                                    fac = 1e6
+#                                    fac = 1e6
+                                    fac = 1
                                 elif cols[i].unit in ('(K_CMB)^2',):
-                                    fac = 1e12
+#                                    fac = 1e12
+                                    fac = 1
                                 elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
                                     fac = 1
                                 elif cols[i].unit == 'muK':
                                     fac = 1
                                 elif cols[i].unit in ('mK', 'mk,thermodynamic'):
-                                    fac = 1e3
+#                                    fac = 1e3
+                                    fac = 1
                                 elif cols[i].unit is None:
                                     fac = 1
                                 else:
@@ -100,15 +106,18 @@ def read_file(fname, type=None):
                     for i in range(hdr['TFIELDS']):
                         #Saves the data in muK as default
                         if cols[i].unit in ('K_CMB', 'K'):
-                            fac = 1e6
+#                            fac = 1e6
+                            fac = 1
                         elif cols[i].unit in ('(K_CMB)^2',):
-                            fac = 1e12
+#                            fac = 1e12
+                            fac = 1
                         elif cols[i].unit in ('N_hit', 'unknown', 'counts', 'deg'):
                             fac = 1
                         elif cols[i].unit == 'muK':
                             fac = 1
                         elif cols[i].unit in ('mK', 'mK,thermodynamic'):
-                            fac = 1e3
+                            fac = 1
+#                            fac = 1e3
                         elif cols[i].unit is None:
                             fac = 1
                         else:
