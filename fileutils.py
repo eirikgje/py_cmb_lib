@@ -28,7 +28,7 @@ def read_file(fname, type=None):
                         if hdr['naxis2'] != 1:
                             if hdr['naxis2'] == 12 * hdr['nside'] ** 2:
                                 if hdr['tfields'] != 3:
-                                    shape = (npix,)
+                                    shape = (hdr['tfields'], npix,)
                                 else:
                                     shape = (3, npix)
                             elif hdr['tform1'] in ('1024E', '1024D'):
@@ -49,25 +49,10 @@ def read_file(fname, type=None):
                         objdata.pol_axis = 0
                     else:
                         if hdr['naxis2'] != 1:
-                            if cols[0].unit in ('K_CMB', 'K'):
-#                                fac = 1e6
-                                fac = 1
-                            elif cols[0].unit in ('(K_CMB)^2',):
-#                                fac = 1e12
-                                fac = 1
-                            elif cols[0].unit in ('N_hit', 'unknown', 'counts', 'deg'):
-                                fac = 1
-                            elif cols[0].unit == 'muK':
-                                fac = 1
-                            elif cols[0].unit == 'mK':
-#                                fac = 1e3
-                                fac = 1
-                            elif cols[0].unit is None:
-                                fac = 1
-                            else:
-                                raise ValueError("Unknown unit")
+                            fac = 1
                             if hdr['naxis2'] == 12 * hdr['nside'] ** 2:
-                                objdata.map[:] = data.field(0).flatten().astype(np.float64) * fac
+                                for i in range(hdr['tfields']):
+                                    objdata.map[i, :] = data.field(i).flatten().astype(np.float64) * fac
                             elif hdr['tform1'] in ('1024E', '1024D'):
                                 objdata.map[:] = data.field(0).flatten().astype(np.float64) * fac
                             else:
@@ -75,25 +60,26 @@ def read_file(fname, type=None):
                                     objdata.map[i] = data.field(0)[i].astype(np.float64)*fac
                         else:
                             for i in range(hdr['TFIELDS']):
+                                fac = 1
                             #Saves the data in muK as default
-                                if cols[i].unit in ('K_CMB', 'K'):
-#                                    fac = 1e6
-                                    fac = 1
-                                elif cols[i].unit in ('(K_CMB)^2',):
-#                                    fac = 1e12
-                                    fac = 1
-                                elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
-                                    fac = 1
-                                elif cols[i].unit == 'muK':
-                                    fac = 1
-                                elif cols[i].unit in ('mK', 'mk,thermodynamic'):
-#                                    fac = 1e3
-                                    fac = 1
-                                elif cols[i].unit is None:
-                                    fac = 1
-                                else:
-                                    print cols[i].unit
-                                    raise ValueError("Unknown unit")
+#                                if cols[i].unit in ('K_CMB', 'K'):
+##                                    fac = 1e6
+#                                    fac = 1
+#                                elif cols[i].unit in ('(K_CMB)^2',):
+##                                    fac = 1e12
+#                                    fac = 1
+#                                elif cols[i].unit in ('N_hit', 'unknown', 'counts'):
+#                                    fac = 1
+#                                elif cols[i].unit == 'muK':
+#                                    fac = 1
+#                                elif cols[i].unit in ('mK', 'mk,thermodynamic'):
+##                                    fac = 1e3
+#                                    fac = 1
+#                                elif cols[i].unit is None:
+#                                    fac = 1
+#                                else:
+#                                    print cols[i].unit
+#                                    raise ValueError("Unknown unit")
                                 objdata.map[i] = (data.field(i).flatten()).astype(np.float64)*fac
                                 objdata.map[i, data.field(i).flatten() == 
                                             float(hdr['bad_data'])] = np.nan
@@ -105,23 +91,24 @@ def read_file(fname, type=None):
                 else:
                     for i in range(hdr['TFIELDS']):
                         #Saves the data in muK as default
-                        if cols[i].unit in ('K_CMB', 'K'):
-#                            fac = 1e6
-                            fac = 1
-                        elif cols[i].unit in ('(K_CMB)^2',):
-#                            fac = 1e12
-                            fac = 1
-                        elif cols[i].unit in ('N_hit', 'unknown', 'counts', 'deg'):
-                            fac = 1
-                        elif cols[i].unit == 'muK':
-                            fac = 1
-                        elif cols[i].unit in ('mK', 'mK,thermodynamic'):
-                            fac = 1
-#                            fac = 1e3
-                        elif cols[i].unit is None:
-                            fac = 1
-                        else:
-                            raise ValueError("Unknown unit")
+                        fac = 1
+#                        if cols[i].unit in ('K_CMB', 'K'):
+##                            fac = 1e6
+#                            fac = 1
+#                        elif cols[i].unit in ('(K_CMB)^2',):
+##                            fac = 1e12
+#                            fac = 1
+#                        elif cols[i].unit in ('N_hit', 'unknown', 'counts', 'deg'):
+#                            fac = 1
+#                        elif cols[i].unit == 'muK':
+#                            fac = 1
+#                        elif cols[i].unit in ('mK', 'mK,thermodynamic'):
+#                            fac = 1
+##                            fac = 1e3
+#                        elif cols[i].unit is None:
+#                            fac = 1
+#                        else:
+#                            raise ValueError("Unknown unit")
                         objdata.map[i] = (data.field(i).flatten()).astype(np.float64)*fac
 #                        objdata.map[i, data.field(i).flatten() == 
 #                                    float(hdr['bad_data'])] = \
