@@ -80,7 +80,7 @@ def map2alm(md, lmax, mmax=None, weights=None):
 def alm2ps(ad):
     if ad.pol_axis is not None:
         if ad.pol_axis < ad.ind_axis:
-            shape = list(ad.alms.shape[:ad.pol_axis] + (6,) + ad.alms.shape[ad.pol_axis+1:ad.ind_axis] + (ad.lmax + 1) + ad.alms.shape[ad.ind_axis + 1:])
+            shape = list(ad.alms.shape[:ad.pol_axis] + (6,) + ad.alms.shape[ad.pol_axis+1:ad.ind_axis] + (ad.lmax + 1,) + ad.alms.shape[ad.ind_axis + 1:])
         else:
             shape = list(ad.alms.shape[:ad.ind_axis] + (ad.lmax + 1,) + ad.alms.shape[ad.ind_axis+1:ad.pol_axis] + (6,) + ad.alms.shape[ad.pol_axis + 1:])
         cd = almmod.ClData(ad.lmax, cls = np.zeros(shape), spec_axis=ad.pol_axis, spectra='all')
