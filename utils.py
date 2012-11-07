@@ -130,7 +130,8 @@ def noisemap(noise_data, nside=None):
         noisemap = gauss * noise_data.map
         noise = mapmod.MapData(nside=noise_data.nside, map=noisemap, 
                                 pol_axis=noise_data.pol_axis, 
-                                pol_iter=noise_data.pol_iter)
+                                pol_iter=noise_data.pol_iter,
+                                ordering=noise_data.ordering)
     elif isinstance(noise_data, np.ndarray):
         if nside is None:
             raise ValueError("Must provide nside when noise_data is an array")
