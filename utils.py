@@ -9,6 +9,24 @@ import subprocess
 import shlex
 import tempfile
 
+def iter_over_all_but_one(ar, axis):
+    if axis != ar.ndim - 1:
+        for j in xrange(ar.shape[-1]):
+            for it in iter_over_all_but_one(ar[..., j], axis):
+                yield it
+    else:
+        if ar.ndim == 1:
+            yield ar
+        elif ar.ndim != 2:
+            for j in xrange(ar.shape[-2]):
+                for it in iter_over_all_but_one(ar[..., j, :], axis - 1):
+                    yield it
+        else:
+            for j in xrange(ar.shape[0]):
+                yield ar[j, :]
+
+#def unravel_index(inds, index_
+
 def getslice(ar, axis, ind):
     """VERY handy utility routine to return a slice.
 

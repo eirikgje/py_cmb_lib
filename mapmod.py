@@ -2,6 +2,8 @@ from __future__ import division
 import numpy as np
 import sys
 from versionmod import bin, any, all
+import utils
+import copy
 #import fileutils
 
 _r2n = {}
@@ -338,45 +340,102 @@ def degrade_average(md, nside_n):
     switched = False
     if md.ordering == 'ring':
         switched = True
-        md.switchordering()
+        md_new = md.switchordering()
+    else:
+        md_new = copy.deepcopy(md)
 
     redfact = (md.nside // nside_n) ** 2
-    temp = np.reshape(md.map, md.map.shape[:md.pix_axis] + 
+    temp = np.reshape(md_new.map, md_new.map.shape[:md.pix_axis] + 
                       (12*nside_n*nside_n, redfact) + 
-                      md.map.shape[md.pix_axis + 1:])
+                      md_new.map.shape[md.pix_axis + 1:])
     #nmap = MapData(nside_n, ordering='nested')
-    md._nside = nside_n
-    md.map = np.average(temp, axis=md.pix_axis + 1)
-    if switched: md.switchordering()
-    return md
+    md_new._nside = nside_n
+    md_new.map = np.average(temp, axis=md.pix_axis + 1)
+    if switched: md_new = md_new.switchordering()
+    return md_new
 
-def degrade(md, nside_n, pixwin=None):
-    if pixwin is None:
+def degrade_average_remove_badpix(md, nside_n, badpix):
+    switched = False
+    if md.ordering == 'ring':
+        md_new = md.switchordering()
+        switched = True
+    else:
+        md_new = copy.deepcopy(md)
+
+    if md_new.pix_axis == md_new.map.ndim - 1:
+        newmap = np.zeros(md_new.map.shape[:md_new.pix_axis] + (12 * nside_n ** 2, ))
+    elif md_new.pix_axis == 0:
+        newmap = np.zeros((12 * nside_n ** 2, ) + md_new.map.shape[md_new.pix_axis + 1:])
+    else:
+        newmap = np.zeros(md_new.map.shape[:md_new.pix_axis] + (12 * nside_n ** 2,) + md_new.map.shape[md_new.pix_axis+1:])
+
+    i = 0
+    for currmap in utils.iter_over_all_but_one(md_new.map, md_new.pix_axis):
+        currind = np.array(np.unravel_index(i, np.array(utils.getslice(md_new.map, md_new.pix_axis, 0)).shape))
+        validmap = count_validpix_in_superpix(currmap, badpix, md_new.nside, nside_n)
+        currmap[currmap <= badpix] = 0
+        summap = sum_subpixels(currmap, md_new.nside, nside_n)
+        if md_new.pix_axis == md_new.map.ndim - 1:
+            newmap[(currind[:md_new.pix_axis],) + (slice(None),)] = summap / validmap
+        elif md_new.pix_axis == 0:
+            newmap[(slice(None),) + (currind[md_new.pix_axis:],)] = summap / validmap
+        else:
+            newmap[(currind[:md_new.pix_axis],) + (slice(None),) + (currind[md_new.pix_axis:],)] = summap / validmap
+        i += 1
+    md_new._nside = nside_n
+    md_new.map = newmap
+    if switched: md_new = md_new.switchordering()
+    return md_new
+
+def sum_subpixels(maparray, old_nside, new_nside):
+    """Should have a maparray that is in nested ordering.
+
+    """
+    old_npix = 12 * old_nside ** 2
+    red_fact = int((old_nside / new_nside) ** 2)
+    return np.array([np.sum(maparray[i:i+red_fact]) for i in range(0, old_npix, red_fact)])
+
+def count_validpix_in_superpix(maparray, badpix_val, old_nside, new_nside):
+    """Should have a maparray that is in nested ordering.
+    
+    """
+    old_npix = 12 * old_nside ** 2
+    red_fact = int((old_nside / new_nside) ** 2)
+    return np.array([np.sum(maparray[i:i+red_fact] > badpix_val) for i in range(0, old_npix, red_fact)])
+    
+
+def degrade(md, nside_n, pixwin=None, badpix=None):
+    if pixwin is None and badpix is None:
         return degrade_average(md, nside_n)
+    elif pixwin is None:
+        return degrade_average_remove_badpix(md, nside_n, badpix)
     else:
         raise NotImplementedError()
 
 def ring2nest(md):
     global _r2n
 
+    md_new = copy.deepcopy(md)
+
     if not _r2n.has_key(md.nside):
         _init_r2n(md.nside)
-    md.map = md.map[(Ellipsis,) * md.pix_axis + (_r2n[md.nside],) + 
+    md_new.map = md.map[(Ellipsis,) * md.pix_axis + (_r2n[md.nside],) + 
                     (Ellipsis,) * (md.map.ndim - 1 - md.pix_axis)]
-    md.ordering='nested'
+    md_new.ordering='nested'
 
-    return md
+    return md_new
 
 def nest2ring(md):
     global _n2r
 
+    md_new = copy.deepcopy(md)
     if not _n2r.has_key(md.nside):
         _init_n2r(md.nside)
 
-    md.map = md.map[(Ellipsis,) * md.pix_axis + (_n2r[md.nside],) + 
+    md_new.map = md.map[(Ellipsis,) * md.pix_axis + (_n2r[md.nside],) + 
                     (Ellipsis,) * (md.map.ndim - 1 - md.pix_axis)]
-    md.ordering='ring'
-    return md
+    md_new.ordering='ring'
+    return md_new
 
 def ring2nest_ind(ind, nside):
     global _n2r
@@ -557,9 +616,9 @@ class MapData(object):
 
     def switchordering(self):
         if self.ordering == 'ring':
-            self = ring2nest(self)
+            return ring2nest(self)
         elif self.ordering == 'nested':
-            self = nest2ring(self)
+            return nest2ring(self)
 
     def appendmaps(self, map, along_axis=0):
         """Add one or several maps to object instance.
