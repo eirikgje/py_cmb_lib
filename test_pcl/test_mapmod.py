@@ -22,34 +22,34 @@ def test_ordering_conversion():
     npix = 12*nside**2
     map = np.arange(npix)
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
-    md.switchordering()
+    md = md.switchordering()
     for key, value in r2npixs.items():
         yield eq_, md.map[value], key
-    md.switchordering()
+    md = md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
-    md.switchordering()
+    md = md.switchordering()
     for key, value in n2rpixs.items():
         yield eq_, md.map[value], key
-    md.switchordering()
+    md = md.switchordering()
     yield ok_, np.all(map == md.map)
 
     #Reload the module because init_r2n and init_n2r acts differently depending
     #on whether the other has been initialized:
     reload(mapmod)
     md = mapmod.MapData(map=map, ordering='nested', nside=nside)
-    md.switchordering()
+    md = md.switchordering()
     for key, value in n2rpixs.items():
         yield eq_, md.map[value], key
-    md.switchordering()
+    md = md.switchordering()
     yield ok_, np.all(map == md.map)
 
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
-    md.switchordering()
+    md = md.switchordering()
     for key, value in r2npixs.items():
         yield eq_, md.map[value], key
-    md.switchordering()
+    md = md.switchordering()
     yield ok_, np.all(map == md.map)
 
     #Test for other nsides
@@ -57,23 +57,23 @@ def test_ordering_conversion():
     npix = 12*nside**2
     map = np.arange(npix)
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
-    md.switchordering()
-    md.switchordering()
+    md = md.switchordering()
+    md = md.switchordering()
     yield ok_, np.all(map == md.map)
 
     nside = 8
     npix = 12*nside**2
     map = np.arange(npix)
     md = mapmod.MapData(map=map, ordering='ring', nside=nside)
-    md.switchordering()
-    md.switchordering()
+    md = md.switchordering()
+    md = md.switchordering()
     yield ok_, np.all(map == md.map)
 
     #Test for other shapes
     map = shaperange((3, 4, npix))
     md = mapmod.MapData(nside, map=map)
-    md.switchordering()
-    md.switchordering()
+    md = md.switchordering()
+    md = md.switchordering()
     yield eq_, md.map.shape, (3, 4, npix)
     yield ok_, np.all(map == md.map)
 
