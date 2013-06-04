@@ -8,7 +8,23 @@ import beammod
 _HPIX_BAD_DATA = -1.6375e30
 _HPIX_MODIFY_VAL = -4e29
 
+def read_map(fname):
+    hdulist = pyfits.open(fname)
+    data = hdulist[1].data
+    hdr = hdulist[1].header
+    nside = hdr['NSIDE']
+    npix = 12 * nside ** 2
+    nfields = hdr['TFIELDS']
+    shape = (nfields, npix)
+    mapdata = mapmod.MapData(nside, ordering=hdr['ordering'], 
+                             map=np.zeros(shape))
+    for i in xrange(nfields):
+        mapdata.map[i, :] = data.field(i).flatten()
+
+    return mapdata
+
 def read_file(fname, type=None):
+    """In the process of being deprecated"""
     if fname.endswith('.fits'):
         #This will expand as need arises, for now, pretty ad-hoc
         hdulist = pyfits.open(fname)
