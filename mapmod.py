@@ -354,6 +354,20 @@ def degrade_average(md, nside_n):
     if switched: md_new = md_new.switchordering()
     return md_new
 
+def degrade_mask(md, nside_n):
+    """If more than half of the subpixels are masked, the superpixel will also be.
+    
+    Assumes that the mask is all zeroes and ones.
+    """
+
+    if np.any(md.map[md.map != 0] != 1):
+        raise ValueError("Mask contains other values than 0 and 1")
+
+    md_new = degrade_average(md, nside_n)
+    md_new.map[md_new.map < 0.5] = 0
+    md_new.map[md_new.map >= 0.5] = 1
+    return md_new
+
 def degrade_average_remove_badpix(md, nside_n, badpix):
     switched = False
     if md.ordering == 'ring':
