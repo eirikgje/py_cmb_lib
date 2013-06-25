@@ -10,11 +10,20 @@ _HPIX_MODIFY_VAL = -4e29
 
 def read_map(fname):
     hdulist = pyfits.open(fname)
-    data = hdulist[1].data
     hdr = hdulist[1].header
+    nfields = hdr['TFIELDS']
+    duplicate_err = False
+    for i in xrange(1, nfields+1):
+        for j in xrange(1, nfields+1):
+            if i == j: continue
+            if hdr['TTYPE%d' % i] == hdr['TTYPE%d' % j]:
+                duplicate_err = True
+    if duplicate_err:
+        for i in xrange(1, nfields+1):
+            hdr['TTYPE%d' % i] = hdr['TTYPE%d' % i] + '%d' % i
+    data = hdulist[1].data
     nside = hdr['NSIDE']
     npix = 12 * nside ** 2
-    nfields = hdr['TFIELDS']
     shape = (nfields, npix)
     mapdata = mapmod.MapData(nside, ordering=hdr['ordering'], 
                              map=np.zeros(shape))
